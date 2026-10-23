@@ -81,6 +81,23 @@ Sepolia は 2026-10-06 に次のアップグレード Glamsterdam が入って�
 - アプリの「GAS (ESTIMATE)」は `estimateContractGas` でチェーンに聞く（式 `estimateMintGas` は聞けないときの予備）
 - ガス価格が同じなら、Glamsterdam 後は ETH での mint が今の約 4 倍の値段。Base に同じ改定が入るかは OP Stack 次第（未確認）
 
+### Base の実際のガス代（2026-10-23 Base Sepolia で実測 → Base メインネットの料金で換算）
+
+Base Sepolia の gas はローカルと同じ（Glamsterdam は入っていない）。テストネットは L1 のガス価格が 15 wei しかなく L1 データ費がほぼ 0 になるので、
+同じトランザクションを **Base メインネットの GasPriceOracle（0x4200…000F の `getL1Fee`）** に通して L1 データ費を出した。
+その時点のガス価格は Base 0.006 gwei・Ethereum 0.047 gwei（どちらも非常に安い時間帯）。
+
+| | gas | Base: 実行費 | Base: L1 データ費 | **Base 合計** | 参考: Ethereum（今の料金・同じ gas 価格） |
+|---|---|---|---|---|---|
+| mint 8×8 | 24.0万 | 0.00000144 ETH | 0.0000000008 ETH | **0.0000014 ETH** | 0.000011 ETH |
+| mint 32×32 | 31.1万 | 0.00000186 ETH | 0.0000000013 ETH | **0.0000019 ETH** | 0.000015 ETH |
+| mint 64×64 | 44.3万 | 0.00000266 ETH | 0.0000000019 ETH | **0.0000027 ETH** | 0.000021 ETH |
+| deploy | 367万 | 0.0000220 ETH | 0.000000047 ETH | **0.000022 ETH** | 0.00017 ETH |
+
+- **Base の L1 データ費は実行費の 0.1% 未満**（Ecotone 以降は blob に載るので安い）。Base のコストはほぼ L2 の実行費で決まる
+- Ethereum はガス価格の上下が大きい（0.047 gwei は安い時。混むと 1〜数十 gwei）。Glamsterdam 後は gas 自体がさらに約 4 倍
+- 測り直し: `node scripts/test-mint.mjs base-sepolia 0x<PixMint>`（テストネットのみ）
+
 ## 4. コントラクト API（`contracts/PixMint.sol`）
 
 | 関数 | 説明 |
