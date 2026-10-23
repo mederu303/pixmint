@@ -48,7 +48,8 @@ if (OWNER && !isAddress(OWNER)) {
 }
 
 const art = JSON.parse(fs.readFileSync(new URL('../lib/PixMint.json', import.meta.url)));
-const account = privateKeyToAccount(PRIVATE_KEY);
+// MetaMask が書き出す鍵は 0x なし
+const account = privateKeyToAccount(PRIVATE_KEY.startsWith('0x') ? PRIVATE_KEY : `0x${PRIVATE_KEY}`);
 const transport = http(RPC_URL);
 const pub = createPublicClient({ transport });
 const chainId = await pub.getChainId();
