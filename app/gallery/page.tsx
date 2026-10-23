@@ -133,13 +133,6 @@ export default function Gallery() {
         <div className="coll-bg" aria-hidden>
           <img src="/banner.jpg" alt="" width={1376} height={459} />
         </div>
-        <div className="coll-social">
-          {SOCIAL.map((x) => (
-            <a key={x.name} href={x.href} target="_blank" rel="noopener noreferrer" aria-label={`mederu on ${x.name}`} title={`@mederu_art on ${x.name}`}>
-              {x.icon}
-            </a>
-          ))}
-        </div>
         <div className="coll-body">
           <div className="coll-id">
             <img className="coll-avatar" src="/avatar.jpg" alt="" width={256} height={256} />
@@ -153,44 +146,55 @@ export default function Gallery() {
                 {feeBps != null && <span>{t('gallery.fee', { pct: Number(feeBps) / 100 })}</span>}
               </div>
             </div>
-            {collections.length > 0 && (
-              <div className="coll-links">
+            <dl className="coll-stats">
+              <div>
+                <dt>{t('gallery.statWorks')}</dt>
+                <dd>{loaded ? count : '—'}</dd>
+              </div>
+              <div>
+                <dt>{t('gallery.statArtists')}</dt>
+                <dd>{stats.artists}{more && '+'}</dd>
+              </div>
+              <div>
+                <dt>{t('gallery.statOwners')}</dt>
+                <dd>{stats.owners}{more && '+'}</dd>
+              </div>
+              <div>
+                <dt>{t('gallery.statListed')}</dt>
+                <dd>{stats.listed}{more && '+'}</dd>
+              </div>
+              <div>
+                <dt>{t('gallery.statFloor')}</dt>
+                <dd>{stats.floor != null ? `${formatEther(stats.floor)} ETH` : '—'}</dd>
+              </div>
+            </dl>
+            <div className="coll-right">
+              {/* OpenSea も SNS と同じ角丸のアイコンで並べる（船のアイコン + チェーン名） */}
+              <div className="coll-social">
                 {collections.map((p) => (
                   <a
                     key={p.chain.id}
-                    className="tool"
+                    className="os"
                     href={`https://opensea.io/assets/${OPENSEA[p.chain.id]}/${p.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={t('gallery.opensea', { chain: LABEL[p.chain.id] })}
+                    title={t('gallery.opensea', { chain: LABEL[p.chain.id] })}
                   >
-                    {t('gallery.opensea', { chain: LABEL[p.chain.id] })} ↗
+                    <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden fill="currentColor">
+                      <path d="M11 3 4.5 14H11zM12.5 6v8H18zM3 16h18l-1.6 3.2a1.5 1.5 0 0 1-1.3.8H5.9a1.5 1.5 0 0 1-1.3-.8z" />
+                    </svg>
+                    <span>{p.chain.id === 1 ? 'ETH' : 'BASE'}</span>
                   </a>
                 ))}
-              </div>
-            )}
+              {SOCIAL.map((x) => (
+                <a key={x.name} href={x.href} target="_blank" rel="noopener noreferrer" aria-label={`mederu on ${x.name}`} title={`@mederu_art on ${x.name}`}>
+                  {x.icon}
+                </a>
+              ))}
+            </div>
+            </div>
           </div>
-          <dl className="coll-stats">
-            <div>
-              <dt>{t('gallery.statWorks')}</dt>
-              <dd>{loaded ? count : '—'}</dd>
-            </div>
-            <div>
-              <dt>{t('gallery.statArtists')}</dt>
-              <dd>{stats.artists}{more && '+'}</dd>
-            </div>
-            <div>
-              <dt>{t('gallery.statOwners')}</dt>
-              <dd>{stats.owners}{more && '+'}</dd>
-            </div>
-            <div>
-              <dt>{t('gallery.statListed')}</dt>
-              <dd>{stats.listed}{more && '+'}</dd>
-            </div>
-            <div>
-              <dt>{t('gallery.statFloor')}</dt>
-              <dd>{stats.floor != null ? `${formatEther(stats.floor)} ETH` : '—'}</dd>
-            </div>
-          </dl>
         </div>
       </section>
       <div className="row" style={{ justifyContent: 'space-between' }}>

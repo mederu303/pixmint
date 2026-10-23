@@ -376,3 +376,33 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
   .coll-stats dd { font-size: 15px; }
   .coll-name { font-size: 24px; }
 }
+
+/* 数字はタイトルの右に（1 行にまとめてバナーを低く）。狭いときは下に回る */
+.coll-id .coll-stats { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 4px 12px; align-self: flex-end; }
+.coll-id .coll-stats dd { font-size: 16px; }
+.coll-id .coll-links { align-self: flex-end; }
+@media (max-width: 640px) {
+  .coll-id .coll-stats { margin-left: 0; width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); gap: 6px; }
+  .coll-id .coll-stats dd { white-space: nowrap; }
+  .coll-id .coll-stats dt { font-size: 9px; letter-spacing: 0.06em; }
+  .coll-id .coll-stats dd { font-size: 13px; }
+}
+
+/* タイトル行の右端: OpenSea と SNS を下にそろえて右寄せ。SNS は角丸の枠 */
+.coll-right { margin-left: auto; align-self: flex-end; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.coll-right .coll-links { margin-left: 0; }
+.coll-right .coll-social { position: static; display: flex; gap: 6px; }
+.coll-right .coll-social a { width: 32px; height: 32px; border-radius: 8px; }
+@media (max-width: 640px) {
+  .coll-right { margin-left: 0; width: 100%; }
+}
+
+/* OpenSea のボタン（アイコン + 小さなチェーン名。SNS と同じ高さ・角丸） */
+.coll-right .coll-social a.os { width: auto; padding: 0 9px; gap: 5px; display: inline-flex; align-items: center; text-decoration: none; font-size: 10px; letter-spacing: 0.08em; }
+
+/* 広い画面: 数字はタイトル行の上寄せ、OpenSea・SNS はバナーの右下に固定（行を増やさない） */
+@media (min-width: 901px) {
+  .coll-id { position: relative; padding-right: 0; }
+  .coll-id .coll-stats { align-self: flex-start; margin-top: 2px; }
+  .coll-right { position: absolute; right: 0; bottom: 0; margin: 0; }
+}
