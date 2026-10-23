@@ -76,6 +76,8 @@ npm run dev              # http://localhost:3333
 - owner `0xC9DE…0C08`（デプロイ用と同じ・鍵は `.env.deploy`）・手数料 2.5%・mint 無料・MAX_RUNS 2,048・siteURL `https://pixmint.mederu.art`
 - ⚠️ Ethereum のアドレスは v1 テストネット（`0xc8c4…7dd8`）と同じ文字列（同じ deployer の nonce 0）。チェーンが違う別物
 - **本番サイト = メインネット**（production の環境変数は `_1` / `_8453` だけ）。プレビュー = テストネット v3（`_11155111` / `_84532`）
+- **最初の作品**: Base #1（2026-10-23・25.9万 gas・約 $0.003）/ Ethereum #1「Boo」（2026-10-24・25.6万 gas。MetaMask が優先手数料を約 2 gwei 付けたので 2.16 gwei = 0.00055 ETH。相場 0.19 gwei なら約 0.00005 ETH）
+- Etherscan ではコントラクトの横に ⚠（Etherscan での verify がまだ。Sourcify は済み）。Etherscan の API キーがあれば登録できる
 - RPC は viem の公開 RPC のまま。人が増えたら `NEXT_PUBLIC_RPC_1` / `_8453` に Alchemy などを入れる
 
 ## 本番サイト（2026-10-23）
@@ -104,7 +106,7 @@ npm run dev              # http://localhost:3333
    - gas（特に Base の L1 データ費）を実測
    - OpenSea テストネット等で `tokenURI` が表示されるか確認
 3. ブラウザで Basename / ENS の名前が出るか確認（vitalik.eth のアドレスで作品を作るなど）
-4. WalletConnect をスマホで試す（ID と許可ドメインは設定済み。実機での確認が残り）
+4. ~~WalletConnect をスマホで試す~~ → ✅ 2026-10-24 実機のスマホで接続できた
 5. `DESIGN.md` §7 の残りの決めごと（二重 mint・ロイヤリティのプリセット)
 6. ~~未テスト: 受け取りを拒むコントラクト宛ての送金 → `pending` / `claim()` の経路~~ → ✅ 2026-10-23 `test/run.mjs` に追加（Foundry は使わず今の仕組みで）:
    作者が ETH を拒む → 二次販売は通り、ロイヤリティは pending → claim は受け取れるまで revert・受け取れたら全額・2回目は 0 /
