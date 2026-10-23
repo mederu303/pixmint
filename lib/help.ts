@@ -183,7 +183,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             'Drop an image (PNG, JPEG, GIF, WebP or SVG) onto the canvas, paste one with ⌘V, or use the Image button. It is fitted to the current grid size.',
             'Choose the number of colors, dithering, or "use current palette", then Place. It floats so you can move it before pressing Enter.',
             'Enlarged pixel art (such as a pixmint PNG) is detected and read cell by cell, so it stays sharp. The background color becomes transparent.',
-            'If the result would be too detailed to render on-chain (over 2,048 runs), pixmint fixes it for you. "Keep colors" (the default) merges tiny specks into the colors around them; "Keep detail" uses fewer colors instead. For detailed illustrations, 96×96 is often the sweet spot.',
+            'If the result would be too detailed to render on-chain (over 2,048 runs), pixmint fixes it for you. "Balanced" (the default) tries several color counts and picks the one that looks closest to the original; "Keep colors" merges tiny specks into the colors around them; "Keep detail" uses fewer colors instead. For detailed illustrations, 96×96 is often the sweet spot.',
           ],
         },
       ],
