@@ -180,7 +180,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: 'Turning an image into pixels',
           a: [
-            'Drop an image onto the canvas, paste one with ⌘V, or use the Image button. It is fitted to the current grid size.',
+            'Drop an image (PNG, JPEG, GIF, WebP or SVG) onto the canvas, paste one with ⌘V, or use the Image button. It is fitted to the current grid size.',
             'Choose the number of colors, dithering, or "use current palette", then Place. It floats so you can move it before pressing Enter.',
             'Enlarged pixel art (such as a pixmint PNG) is detected and read cell by cell, so it stays sharp. The background color becomes transparent.',
             'If the result would be too detailed to render on-chain (over 2,048 runs), the colors are reduced automatically.',
@@ -355,7 +355,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: '画像をドット絵にする',
           a: [
-            'キャンバスに画像をドロップするか、⌘V で貼り付けるか、「画像」ボタンで選びます。今のグリッドのサイズに合わせます。',
+            'キャンバスに画像（PNG・JPEG・GIF・WebP・SVG）をドロップするか、⌘V で貼り付けるか、「画像」ボタンで選びます。今のグリッドのサイズに合わせます。',
             '色数・ディザ・「今のパレットに寄せる」を選んで「置く」を押します。浮いた状態で置かれるので、動かしてから Enter で確定します。',
             '拡大したドット絵（pixmint の PNG など）は自動で見分けて、1マスずつ読み取るのでにじみません。背景と同じ色は透明にします。',
             '細かすぎてチェーン上で描けない（ラン 2,048 超え）ときは、自動で色数を減らします。',

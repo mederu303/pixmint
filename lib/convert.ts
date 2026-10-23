@@ -256,7 +256,48 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
   }
 }
 
-/** ファイル / クリップボードの画像を読み込む */
-export async function loadImage(file: Blob): Promise<ImageBitmap> {
-  return createImageBitmap(file);
+/** 読み込んだ画像（ImageBitmap か、SVG を描いたキャンバス） */
+export type LoadedImage = CanvasImageSource & { width: number; height: number };
+
+/** ファイル / クリップボードの画像を読み込む。SVG は createImageBitmap で読めないので、<img> で描いてキャンバスにする */
+export async function loadImage(file: Blob): Promise<LoadedImage> {
+  const isSvg = file.type === 'image/svg+xml' || (file instanceof File && /\.svg$/i.test(file.name));
+  if (!isSvg) return createImageBitmap(file);
+  return renderSvg(await file.text());
+}
+
+/**
+ * SVG をキャンバスに描く。大きさは viewBox（無ければ width / height）から取り、整数倍に拡大して 1024px 前後にする。
+ * ドット絵の SVG（pixmint の svg()・atelier の exportSVG など）はマスの境目がそろうので、そのあと 1マスずつ読み取れる
+ */
+export async function renderSvg(text: string): Promise<HTMLCanvasElement> {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const svg = doc.documentElement;
+  if (svg.nodeName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) throw new Error('not an SVG');
+  const vb = (svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+  let w = vb.length === 4 && vb[2] > 0 ? vb[2] : parseFloat(svg.getAttribute('width') ?? '');
+  let h = vb.length === 4 && vb[3] > 0 ? vb[3] : parseFloat(svg.getAttribute('height') ?? '');
+  if (!(w > 0) || !(h > 0)) [w, h] = [512, 512];
+  const scale = Math.max(1, Math.floor(1024 / Math.max(w, h)));
+  const W = Math.round(w * scale), H = Math.round(h * scale);
+  // 描く大きさを指定し直す（width/height が % や無いときでも、決めた大きさで描かれるように）。ぼかさない
+  svg.setAttribute('width', String(W));
+  svg.setAttribute('height', String(H));
+  if (!svg.getAttribute('shape-rendering')) svg.setAttribute('shape-rendering', 'crispEdges');
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await img.decode();
+    const cv = document.createElement('canvas');
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, W, H);
+    return cv;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixCanvas, Swatches, ToolIcon } from '../components/Editor';
 import { ImportDialog } from '../components/ImportDialog';
-import { loadImage } from '../lib/convert';
+import { loadImage, type LoadedImage } from '../lib/convert';
 import { MintPanel } from '../components/MintPanel';
 import { useI18n } from '../lib/i18n';
 import { ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
@@ -37,7 +37,7 @@ export default function Studio() {
   const clip = useRef<PixGrid | null>(null);
   const pasteFallback = useRef(0);
   // 画像 → ドット絵の確認画面
-  const [importing, setImporting] = useState<ImageBitmap | null>(null);
+  const [importing, setImporting] = useState<LoadedImage | null>(null);
   const [dropping, setDropping] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [, bump] = useState(0);
@@ -171,7 +171,7 @@ export default function Studio() {
   }, [tool]);
 
   const openImage = async (file: Blob | null | undefined) => {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || !(file.type.startsWith('image/') || (file instanceof File && /\.svg$/i.test(file.name)))) return;
     try {
       setImporting(await loadImage(file));
     } catch {}
@@ -304,7 +304,7 @@ export default function Studio() {
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.svg"
             hidden
             onChange={(e) => {
               openImage(e.target.files?.[0]);

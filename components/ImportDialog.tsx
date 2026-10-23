@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { convert, detectPixelArt, dropBackground, placePixels, sample } from '../lib/convert';
+import { convert, detectPixelArt, dropBackground, placePixels, sample, type LoadedImage } from '../lib/convert';
 import { useI18n } from '../lib/i18n';
 import type { PixGrid } from '../lib/pix';
 import { PXM_MAX_RUNS } from '../src/pxm';
@@ -14,7 +14,7 @@ export function ImportDialog({
   onApply,
   onCancel,
 }: {
-  image: ImageBitmap;
+  image: LoadedImage;
   size: number;
   bg: string;
   palette: string[];
