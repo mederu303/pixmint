@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { sfx } from '../lib/sound';
-import { PALETTES, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
+import { PALETTES, isDark, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 interface Props {
   grid: PixGrid;
@@ -262,7 +262,7 @@ export function Swatches({ colors, selected, onPick }: { colors: string[]; selec
       {colors.map((c, i) => (
         <button
           key={i}
-          className={i === selected ? 'on' : ''}
+          className={`${i === selected ? 'on' : ''} ${isDark(c) ? 'dark' : ''}`}
           style={{ background: c }}
           onClick={() => onPick(i)}
           aria-label={c}

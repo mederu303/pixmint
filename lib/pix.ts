@@ -187,3 +187,10 @@ export const PALETTES: Record<string, string[]> = {
 
 export const DEFAULT_COLOR = '#c77dff';
 export const DEFAULT_BG = '#0a0a1a';
+
+/** 色が暗いか（見た目の明るさが 0〜1 の 0.3 未満）。暗い画面に溶ける色に、白っぽい枠を付けるのに使う */
+export function isDark(hex: string): boolean {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return false;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3;
+}

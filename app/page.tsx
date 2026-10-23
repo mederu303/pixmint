@@ -7,7 +7,7 @@ import { ImportDialog } from '../components/ImportDialog';
 import { loadImage, type LoadedImage } from '../lib/convert';
 import { MintPanel } from '../components/MintPanel';
 import { useI18n } from '../lib/i18n';
-import { ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
+import { isDark, ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 const SAVE_KEY = 'pixmint-doc-v1';
 const PAL_KEY = 'pixmint-palettes-v1';
@@ -20,12 +20,7 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'stamp', key: 'T' }, // S は PNG 保存
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
-/** 色が暗いか（見た目の明るさ。0〜1 の 0.3 未満） */
-const isDark = (hex: string) => {
-  if (!HEX.test(hex)) return false;
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3;
-};
+
 const clonePalettes = () => Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, [...v]]));
 
 export default function Studio() {
@@ -434,7 +429,7 @@ export default function Studio() {
 
         <div className="sect">
           <div className="colorrow">
-            <label className="chip big" title={t('editor.color')}>
+            <label className={`chip big ${isDark(color) ? 'dark' : ''}`} title={t('editor.color')}>
               <input type="color" value={color} onChange={(e) => editColor(e.target.value)} />
               <span style={{ background: color }} />
             </label>
@@ -452,7 +447,7 @@ export default function Studio() {
           </div>
           <div className="colorrow">
             <label className="colorrow note" style={{ flex: 1, minWidth: 0 }} title={t('editor.bg')}>
-              <span className="chip">
+              <span className={`chip ${isDark(bg) ? 'dark' : ''}`}>
                 <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} />
                 <span style={{ background: bg }} />
               </span>
