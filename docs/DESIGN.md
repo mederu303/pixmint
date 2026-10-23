@@ -110,6 +110,8 @@ Base Sepolia の gas はローカルと同じ（Glamsterdam は入っていな�
 - **Base の L1 データ費は実行費の 0.1% 未満**（Ecotone 以降は blob に載るので安い）。Base のコストはほぼ L2 の実行費で決まる
 - Ethereum はガス価格の上下が大きい（0.047 gwei は安い時。混むと 1〜数十 gwei）。Glamsterdam 後は gas 自体がさらに約 4 倍
 - 測り直し: `node scripts/test-mint.mjs base-sepolia 0x<PixMint>`（テストネットのみ）
+- **実際の Base メインネット #1（2026-10-23・16×16・5色・タイトルなし）**: 25.9万 gas × 0.005 gwei = 実行費 0.0000012964 ETH ＋ L1 データ費 0.0000000032 ETH
+  ＝ **合計 0.0000013 ETH（約 $0.003）**。L1 データ費は全体の 0.25%。tokenURI の読み出しは 44.6万 gas
 
 ## 4. コントラクト API（`contracts/PixMint.sol`）
 
@@ -163,6 +165,8 @@ Base Sepolia の gas はローカルと同じ（Glamsterdam は入っていな�
   ⚠️ OpenSea は 2025-07 にテストネット対応をやめた（testnets.opensea.io は終了）ので、テストネットでは確かめられない。
   Sepolia で tokenURI（name・image の SVG・attributes・external_url）と contractURI・royaltyInfo が正しいことは確認済み（2026-10-23）。
   OpenSea での表示はメインネットに置いてから確認する
+  ✅ 2026-10-23 **Base メインネット #1 で確認**: OpenSea に画像（オンチェーン SVG）・名前・コレクション名「pixmint」・持ち主（guruguruhyena）・
+  Traits 5 個（Grid / Colors / Creator / Storage / Platform）が何もせずに出た
 - **pixmint の一覧ページ**: `Minted` / `Listed` / `Sold` イベントを読んで一覧を作り、その場で `buy` できる。
   ここで売れたものだけ mederu 手数料と作者ロイヤリティが確実に入る
 
