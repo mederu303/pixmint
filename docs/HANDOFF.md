@@ -36,8 +36,9 @@ mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`�
 - **テスト用：作者／購入者** — ローカルのときだけ出る。MetaMask の設定不要（hardhat の既定アカウント #1・#2）
 - **ブラウザ拡張** — MetaMask・Rabby など（EIP-6963 で見つかればその名前で出る）
 - **WalletConnect（スマホ）** — `.env.local` に `NEXT_PUBLIC_WC_PROJECT_ID` を入れたときだけ出る（start スクリプトは入れない）。
-  ⚠️ 2026-10-23: mederu 共通の ID（ec3b…dbe）で試すと QR もウォレット一覧も空だった＝Reown が接続を拒否している。
-  pixmint 用に Reown（cloud.reown.com）でプロジェクトを作り、許可ドメインに `localhost` と `pixmint.mederu.art` を入れた ID を使う
+  ✅ 2026-10-23: pixmint 用の Reown プロジェクトを作った（ID `d5c6…0ffc`・許可ドメイン `pixmint.mederu.art` と `localhost`）。
+  `.env.local`・`.env.example`・Vercel（production / preview）に設定済み。QR と「All Wallets 350+」が出ることを確認
+  （前の mederu 共通の ID `ec3b…dbe` は QR もウォレット一覧も空だった）
 
 手でやる場合:
 ```
@@ -103,7 +104,7 @@ npm run dev              # http://localhost:3333
    - gas（特に Base の L1 データ費）を実測
    - OpenSea テストネット等で `tokenURI` が表示されるか確認
 3. ブラウザで Basename / ENS の名前が出るか確認（vitalik.eth のアドレスで作品を作るなど）
-4. WalletConnect をスマホで試す（Reown の許可ドメイン）
+4. WalletConnect をスマホで試す（ID と許可ドメインは設定済み。実機での確認が残り）
 5. `DESIGN.md` §7 の残りの決めごと（二重 mint・ロイヤリティのプリセット)
 6. ~~未テスト: 受け取りを拒むコントラクト宛ての送金 → `pending` / `claim()` の経路~~ → ✅ 2026-10-23 `test/run.mjs` に追加（Foundry は使わず今の仕組みで）:
    作者が ETH を拒む → 二次販売は通り、ロイヤリティは pending → claim は受け取れるまで revert・受け取れたら全額・2回目は 0 /
