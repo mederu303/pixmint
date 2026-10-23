@@ -408,7 +408,7 @@ export default function Studio() {
                 </button>
               ))}
             </div>
-            <div className="chips">
+            <div className="stamp-opts">
               <button className="tool" onClick={() => setStampRot((n) => (n + 1) % 4)} title={`${t('stamp.rotate')} (R)`}>
                 ⟳
               </button>
