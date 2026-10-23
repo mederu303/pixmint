@@ -9,6 +9,29 @@ import { readNum, readTotal, readWork, svgUrl, type WorkView } from '../../lib/c
 import { saveOrder } from '../../lib/order';
 
 const PAGE = 24;
+/** mederu の SNS（バナー右上） */
+const SOCIAL = [
+  {
+    name: 'X',
+    href: 'https://x.com/mederu_art',
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="currentColor">
+        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Instagram',
+    href: 'https://www.instagram.com/mederu_art/',
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" />
+        <circle cx="12" cy="12" r="4.3" />
+        <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+];
 /** OpenSea のコレクション。/assets/<chain>/<contract> はコレクションのページへ転送される（slug を変えてもリンクが切れない） */
 const OPENSEA: Record<number, string> = { 1: 'ethereum', 8453: 'base' };
 /** オフにしたチェーン（このブラウザだけに覚える） */
@@ -109,6 +132,13 @@ export default function Gallery() {
       <section className="coll" aria-label="pixmint">
         <div className="coll-bg" aria-hidden>
           <img src="/banner.jpg" alt="" width={1376} height={459} />
+        </div>
+        <div className="coll-social">
+          {SOCIAL.map((x) => (
+            <a key={x.name} href={x.href} target="_blank" rel="noopener noreferrer" aria-label={`mederu on ${x.name}`} title={`@mederu_art on ${x.name}`}>
+              {x.icon}
+            </a>
+          ))}
         </div>
         <div className="coll-body">
           <div className="coll-id">
