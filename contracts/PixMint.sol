@@ -39,10 +39,11 @@ contract PixMint is ERC721, Ownable2Step, ReentrancyGuard {
     string public constant PLATFORM = "pixmint by mederu.art";
 
     uint256 public constant MAX_SIZE = 129;
-    /// @dev tokenURI の読み出しを約2,000万 gas 以内に収めるための上限（4096 ランで実測 約2,060万）。
-    ///      多くの RPC は eth_call を 5,000万 gas で打ち切るので、それより十分下に置く。
-    ///      これでデータは最大 3 + 765 + 8192 = 8,960 bytes になり、1個のコントラクトに収まる
-    uint256 public constant MAX_RUNS = 4096;
+    /// @dev tokenURI を1トランザクションの gas 上限（EIP-7825: 16,777,216）の中で読めるようにするための上限。
+    ///      最悪の形（129×129・255色・2,048 ラン）で 約1,240万 gas。Glamsterdam で読み出しが約17%重くなっても 約1,450万に収まる。
+    ///      これで、ほかのコントラクトもトランザクションの中で tokenURI を読める（4,096 だと 約2,400万で読めなかった）
+    ///      データは最大 3 + 765 + 4,096 = 4,864 bytes
+    uint256 public constant MAX_RUNS = 2048;
     /// @dev UTF-8 で 96 bytes（日本語なら32文字）
     uint256 public constant MAX_TITLE = 96;
     /// @dev 表示名。UTF-8 48 bytes（日本語なら16文字）

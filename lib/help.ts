@@ -1,5 +1,5 @@
 // pixmint — ヘルプページの中身（EN / JP）。数値はコントラクトの値と揃えること
-//   mederu 手数料 2.5%（上限 5%・コントラクトに固定）/ ロイヤリティ 0〜10% / ラン上限 4,096 / タイトル 96 bytes / 表示名 48 bytes
+//   mederu 手数料 2.5%（上限 5%・コントラクトに固定）/ ロイヤリティ 0〜10% / ラン上限 2,048 / タイトル 96 bytes / 表示名 48 bytes
 
 export interface HelpItem {
   q: string;
@@ -47,7 +47,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: 'Why does it say "Too detailed to render on-chain"?',
           a: [
-            'A work can have up to 4,096 runs (a run = consecutive pixels of the same color in a row). Beyond that, rendering the image costs more than many nodes allow, and marketplaces could fail to show it.',
+            'A work can have up to 2,048 runs (a run = consecutive pixels of the same color in a row). Beyond that, rendering the image would cost more gas than a single transaction allows, so other contracts could not read it.',
             'Normal pixel art uses a few hundred runs. If you hit the limit, use fewer colors or merge similar shades.',
           ],
         },
@@ -183,7 +183,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             'Drop an image onto the canvas, paste one with ⌘V, or use the Image button. It is fitted to the current grid size.',
             'Choose the number of colors, dithering, or "use current palette", then Place. It floats so you can move it before pressing Enter.',
             'Enlarged pixel art (such as a pixmint PNG) is detected and read cell by cell, so it stays sharp. The background color becomes transparent.',
-            'If the result would be too detailed to render on-chain (over 4,096 runs), the colors are reduced automatically.',
+            'If the result would be too detailed to render on-chain (over 2,048 runs), the colors are reduced automatically.',
           ],
         },
       ],
@@ -224,7 +224,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: '「細かすぎてチェーン上で描けません」と出る',
           a: [
-            '1作品のランは 4,096 までです（ラン＝横に同じ色が続く区間）。それを超えると画像を組み立てる計算が多くのノードの上限を超え、マーケットで表示できなくなるおそれがあります。',
+            '1作品のランは 2,048 までです（ラン＝横に同じ色が続く区間）。それを超えると画像を組み立てる計算が1トランザクションの gas 上限を超え、ほかのコントラクトから読めなくなります。',
             'ふつうのドット絵は数百ランです。上限に当たったら、色数を減らすか近い色をまとめてください。',
           ],
         },
@@ -358,7 +358,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             'キャンバスに画像をドロップするか、⌘V で貼り付けるか、「画像」ボタンで選びます。今のグリッドのサイズに合わせます。',
             '色数・ディザ・「今のパレットに寄せる」を選んで「置く」を押します。浮いた状態で置かれるので、動かしてから Enter で確定します。',
             '拡大したドット絵（pixmint の PNG など）は自動で見分けて、1マスずつ読み取るのでにじみません。背景と同じ色は透明にします。',
-            '細かすぎてチェーン上で描けない（ラン 4,096 超え）ときは、自動で色数を減らします。',
+            '細かすぎてチェーン上で描けない（ラン 2,048 超え）ときは、自動で色数を減らします。',
           ],
         },
       ],

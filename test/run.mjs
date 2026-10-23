@@ -101,7 +101,7 @@ const cases = [
   ['64x64 blob', blobArt(64, 14)],
   ['128x128 blob', blobArt(128, 24)],
   ['32x32 noise 16色 (最悪寄り)', noiseArt(32, 16)],
-  ['64x64 noise 64色', noiseArt(64, 64)],
+  ['45x45 noise 32色 (上限 2,048 ラン近く)', noiseArt(45, 32)],
   ['1x1', [['#123456']]],
 ];
 
@@ -278,5 +278,39 @@ check('carol cannot acceptOwnership', !(await tx('acceptOwnership', [], { from: 
 check('bob acceptOwnership → owner = bob', (await tx('acceptOwnership', [], { from: bob })).ok && (await ownerIs(bob)));
 check('alice is no longer owner', !(await tx('setMintOpen', [false])).ok && (await tx('setMintOpen', [true], { from: bob })).ok);
 
+// ── 上限ぎりぎりの作品でも tokenURI がトランザクションの gas 上限（EIP-7825: 16,777,216）に収まること ──
+// 最悪の形: 129×129・255色・ちょうど MAX_RUNS ラン（色ごとにパスが分かれ、SVG がいちばん長くなる）
+const TX_GAS_CAP = 16_777_216;
+const MAX_RUNS_ON_CHAIN = Number((await view('MAX_RUNS', [])).v);
+function worstCase(runs, size = 129, ncol = 255) {
+  const pal = [];
+  for (let i = 0; i < ncol; i++) pal.push((i * 37) & 255, (i * 91) & 255, (i * 53) & 255);
+  // 各行をできるだけ均等に割る（どの行も size マス・合計 runs ラン）
+  const out = [];
+  let left = runs, k = 0;
+  for (let r = 0; r < size; r++) {
+    const n = Math.max(1, Math.min(size, Math.round(left / (size - r))));
+    left -= n;
+    const base = Math.floor(size / n);
+    let rest = size - base * n;
+    for (let i = 0; i < n; i++) {
+      out.push(base + (rest-- > 0 ? 1 : 0), k++ % ncol);
+    }
+  }
+  return new Uint8Array([1, size, ncol, ...pal, ...out]);
+}
+check('MAX_RUNS = 2048', MAX_RUNS_ON_CHAIN === 2048);
+{
+  const b = worstCase(MAX_RUNS_ON_CHAIN);
+  const { r, gas } = await mint(b, 'x'.repeat(96), 1000);
+  check(`mint worst case ${MAX_RUNS_ON_CHAIN} runs / 255 colors / 129x129 (gas ${gas.toLocaleString()})`, !r.execResult.exceptionError);
+  const g = (await view('tokenURI', [(await view('totalMinted', [])).v])).gas;
+  // Glamsterdam で読み出しが約17%重くなっても上限に収まるよう、今の料金で 85% 以下
+  check(`worst-case tokenURI ${g.toLocaleString()} gas ≤ 85% of tx cap (${((g / TX_GAS_CAP) * 100).toFixed(0)}%)`, g <= TX_GAS_CAP * 0.85);
+  check(`reject ${MAX_RUNS_ON_CHAIN + 1} runs`, !!(await mint(worstCase(MAX_RUNS_ON_CHAIN + 1))).r.execResult.exceptionError);
+  let enc = true;
+  try { encodePxm(noiseArt(64, 64)); } catch { enc = false; }
+  check('encoder rejects 64x64 noise (> 2,048 runs)', !enc);
+}
 console.log(fail ? `\nFAILED: ${fail}` : '\nALL OK');
 process.exit(fail ? 1 : 0);

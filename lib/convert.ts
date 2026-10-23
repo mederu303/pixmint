@@ -3,7 +3,7 @@
 //   1. 縦横比を保ってグリッドに収める（余白は透明 = null）。縮小はブラウザの高品質な補間（面積平均に近い）
 //   2. 半透明より薄いマスは透明にする
 //   3. 色を減らす: median cut で N 色を作る、または今のパレットの近い色に寄せる。Floyd–Steinberg のディザも選べる
-//   4. チェーン上の上限（ラン 4,096）を超えたら、収まるまで色数を自動で下げる
+//   4. チェーン上の上限（ラン 2,048）を超えたら、収まるまで色数を自動で下げる
 import { encodePxm, PXM_MAX_RUNS, validatePxm } from '../src/pxm';
 import type { PixGrid } from './pix';
 
@@ -243,7 +243,7 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
       const info = validatePxm(encodePxm(grid.map((row) => row.map((c) => c ?? bg)), bg));
       return { grid, colors: info.colors, runs: info.runs, reduced };
     } catch {
-      // ラン 4,096 超え。ディザは細かくなりやすいので、まず色数を下げる
+      // ラン 2,048 超え。ディザは細かくなりやすいので、まず色数を下げる
       if (n <= 2) {
         // 2 色でも収まらない（細かいディザなど）→ ディザを切ってもう一度
         if (opt.dither) return { ...convert(rgba, size, bg, { ...opt, dither: false }), reduced: true };

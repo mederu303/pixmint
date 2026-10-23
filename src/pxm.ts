@@ -20,7 +20,7 @@ export const PXM_VERSION = 1;
 export const PXM_MAX_SIZE = 129;
 export const PXM_MAX_COLORS = 255;
 /** tokenURI の読み出しを約2,000万 gas に収めるための上限（PixMint.MAX_RUNS と同じ） */
-export const PXM_MAX_RUNS = 4096;
+export const PXM_MAX_RUNS = 2048;
 
 function parseHex(c: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(c.trim());
