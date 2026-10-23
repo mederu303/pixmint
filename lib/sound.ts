@@ -76,6 +76,10 @@ export const sfx = {
     tone(700, 500, 0.09, 'square', 0.05);
     setTimeout(() => tone(500, 260, 0.14, 'square', 0.05), 90);
   },
+  redo: () => {
+    tone(260, 500, 0.09, 'square', 0.05);
+    setTimeout(() => tone(500, 700, 0.12, 'square', 0.05), 90);
+  },
   boom: () => {
     noise(0.7, 0.16);
     tone(160, 40, 0.5, 'sawtooth', 0.06);

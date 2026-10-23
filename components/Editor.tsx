@@ -240,6 +240,7 @@ const ICONS: Record<string, string> = {
   fill: 'M5 11l7-7 7 7-7 7-7-7zM19 15s2 2.4 2 3.5a2 2 0 01-4 0c0-1.1 2-3.5 2-3.5z',
   picker: 'M14 4l6 6M17 7l-9 9-4 4v-4l9-9M12 6l6 6',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
+  redo: 'M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3',
   clear: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   select: 'M4 4h3M10 4h4M17 4h3v3M20 10v4M20 17v3h-3M14 20h-4M7 20H4v-3M4 14v-4M4 7V4',
   import: 'M4 16l4-4 3 3 5-5 4 4M4 4h16v16H4zM9 8.5a1 1 0 100 .01',

@@ -17,7 +17,7 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'fill', key: 'G' },
   { id: 'picker', key: 'I' },
   { id: 'select', key: 'M' },
-  { id: 'stamp', key: 'S' },
+  { id: 'stamp', key: 'T' }, // S は PNG 保存
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
 const clonePalettes = () => Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, [...v]]));
@@ -34,6 +34,7 @@ export default function Studio() {
   const [palettes, setPalettes] = useState<Record<string, string[]>>(clonePalettes);
   const [swatch, setSwatch] = useState<number | null>(null);
   const history = useRef<PixGrid[]>([]);
+  const future = useRef<PixGrid[]>([]); // やり直し用（戻したもの）。新しく描いたら消える
   // 選択・コピー＆ペースト。floating は確定前の絵（動かせる）。clip はこのページの中のクリップボード
   const [sel, setSel] = useState<PixRect | null>(null);
   const [floating, setFloating] = useState<PixFloat | null>(null);
@@ -98,6 +99,7 @@ export default function Studio() {
 
   const beginStroke = useCallback(() => {
     history.current.push(grid);
+    future.current = [];
     if (history.current.length > 50) history.current.shift();
     bump((n) => n + 1);
   }, [grid]);
@@ -106,8 +108,21 @@ export default function Studio() {
     // 浮いている絵は、持ち上げた／貼り付けた時点の履歴に戻すと消える
     setFloating(null);
     const prev = history.current.pop();
-    if (prev) sfx.undo();
-    if (prev) setGrid(prev);
+    if (prev) {
+      future.current.push(grid);
+      sfx.undo();
+      setGrid(prev);
+    }
+    bump((n) => n + 1);
+  };
+
+  const redo = () => {
+    const next = future.current.pop();
+    if (!next) return;
+    setFloating(null);
+    history.current.push(grid);
+    sfx.redo();
+    setGrid(next);
     bump((n) => n + 1);
   };
 
@@ -117,6 +132,7 @@ export default function Studio() {
     if (size === grid.length) return;
     if (grid.some((r) => r.some(Boolean)) && !window.confirm(t('editor.resizeConfirm'))) return;
     history.current = [];
+    future.current = [];
     setGrid(newGrid(size));
   };
   // ODD の切り替えは絵を残す（1列・1行を足す／削る）。削る側に絵があるときだけ確認する
@@ -211,9 +227,19 @@ export default function Studio() {
       if (importing) return;
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key.toLowerCase();
+      if ((mod && k === 'z' && e.shiftKey) || (mod && k === 'y')) {
+        e.preventDefault();
+        redo();
+        return;
+      }
       if (mod && k === 'z') {
         e.preventDefault();
         undo();
+        return;
+      }
+      if (!mod && k === 's') {
+        e.preventDefault();
+        download();
         return;
       }
       if (mod && (k === 'c' || k === 'x') && (sel || floating)) {
@@ -325,13 +351,17 @@ export default function Studio() {
             <ToolIcon name="undo" />
             <span>{t('tool.undo')}</span>
           </button>
-          <button className="tb" onClick={clear} title={t('tool.clear')}>
-            <ToolIcon name="clear" />
-            <span>{t('tool.clear')}</span>
+          <button className="tb" onClick={redo} disabled={!future.current.length} title={`${t('tool.redo')} (⇧⌘Z)`}>
+            <ToolIcon name="redo" />
+            <span>{t('tool.redo')}</span>
           </button>
           <button className="tb" onClick={() => fileRef.current?.click()} title={t('tool.importHint')}>
             <ToolIcon name="import" />
             <span>{t('tool.import')}</span>
+          </button>
+          <button className="tb" onClick={clear} title={t('tool.clear')}>
+            <ToolIcon name="clear" />
+            <span>{t('tool.clear')}</span>
           </button>
           <input
             ref={fileRef}
@@ -468,7 +498,7 @@ export default function Studio() {
             <ToolIcon name={sound ? 'sound' : 'mute'} />
             {sound ? t('editor.soundOn') : t('editor.soundOff')}
           </button>
-          <button className="tool dl-btn" onClick={download} title={t('editor.downloadHint', { px: exportPx })}>
+          <button className="tool dl-btn" onClick={download} title={`${t('editor.downloadHint', { px: exportPx })} (S)`}>
             <ToolIcon name="download" />
             {t('editor.download')}
           </button>
