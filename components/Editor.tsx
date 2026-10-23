@@ -20,17 +20,40 @@ interface Props {
   onCommit?: () => void; // 浮いている絵を下ろす
   // スタンプ（向き・大きさを反映したもの）。マウスの位置に薄く見せて、クリックで押す
   stamp?: PixGrid | null;
-  onStamp?: (r: number, c: number) => void;
+  /** 押すときのキー（Ctrl = 左右反転・Shift = 2 倍）を当てたスタンプ。下見にも使う */
+  stampFor?: (mods: StampMods) => PixGrid;
+  onStamp?: (r: number, c: number, continuing: boolean, mods: StampMods) => void; // continuing = ドラッグ中の 2 つ目以降（戻すときは 1 回にまとめる）
 }
 
+export interface StampMods {
+  flip: boolean; // Ctrl を押しながら
+  big: boolean; // Shift を押しながら
+}
+const modsOf = (e: { ctrlKey: boolean; shiftKey: boolean }): StampMods => ({ flip: e.ctrlKey, big: e.shiftKey });
+
 /** キャンバス。1マス = 1画素で描いて CSS で拡大する（原本 drawPixCanvas と同じ） */
-export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, onStamp }: Props) {
+export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, stampFor, onStamp }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ last: [number, number]; work: PixGrid } | null>(null);
   // 選択ツールのドラッグ: 'select' = 範囲を作る / 'move' = 浮いている絵を動かす（つかんだ位置のずれを持つ）
   const sdrag = useRef<{ kind: 'select'; r0: number; c0: number } | { kind: 'move'; dr: number; dc: number } | null>(null);
   const size = grid.length;
   const [hover, setHover] = useState<[number, number] | null>(null);
+  // スタンプをブラシのようにドラッグで続けて押す。前に押した位置から、スタンプの大きさの半分離れたら次を押す
+  const stampDrag = useRef<[number, number] | null>(null);
+  const [mods, setMods] = useState<StampMods>({ flip: false, big: false });
+  // キーを押した・離しただけでも下見を変える
+  useEffect(() => {
+    if (tool !== 'stamp') return;
+    const on = (e: KeyboardEvent) => setMods((m) => (m.flip === e.ctrlKey && m.big === e.shiftKey ? m : modsOf(e)));
+    window.addEventListener('keydown', on);
+    window.addEventListener('keyup', on);
+    return () => {
+      window.removeEventListener('keydown', on);
+      window.removeEventListener('keyup', on);
+    };
+  }, [tool]);
+  const shown = tool === 'stamp' && stampFor ? stampFor(mods) : stamp;
 
   useEffect(() => {
     const cv = ref.current;
@@ -57,10 +80,10 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
         }),
       );
     // スタンプの下見（押す位置を薄く）
-    if (tool === 'stamp' && stamp && hover) {
-      const [r0, c0] = stampOrigin(hover, stamp);
+    if (tool === 'stamp' && shown && hover) {
+      const [r0, c0] = stampOrigin(hover, shown);
       ctx.globalAlpha = 0.55;
-      stamp.forEach((row, i) =>
+      shown.forEach((row, i) =>
         row.forEach((v, j) => {
           if (!v) return;
           ctx.fillStyle = v;
@@ -69,7 +92,7 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       );
       ctx.globalAlpha = 1;
     }
-  }, [grid, bg, size, floating, tool, stamp, hover]);
+  }, [grid, bg, size, floating, tool, shown, hover]);
 
   const inside = (s: PixRect | null | undefined, r: number, c: number) =>
     !!s && r >= s.r && r < s.r + s.h && c >= s.c && c < s.c + s.w;
@@ -109,7 +132,11 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     onBeginStroke();
     const work = grid.map((row) => [...row]);
     if (tool === 'stamp') {
-      onStamp?.(r, c);
+      ref.current!.setPointerCapture(e.pointerId);
+      const m = modsOf(e);
+      setMods(m);
+      onStamp?.(r, c, false, m);
+      stampDrag.current = [r, c];
       return;
     }
     if (tool === 'fill') {
@@ -128,6 +155,16 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     if (tool === 'stamp') {
       const [r, c] = cellAt(e);
       setHover((h) => (h && h[0] === r && h[1] === c ? h : [r, c]));
+      const m = modsOf(e);
+      if (m.flip !== mods.flip || m.big !== mods.big) setMods(m);
+      const last = stampDrag.current;
+      if (last && shown) {
+        const step = Math.max(2, Math.round(Math.max(shown.length, shown[0]?.length ?? 0) / 2));
+        if (Math.hypot(r - last[0], c - last[1]) >= step) {
+          onStamp?.(r, c, true, m);
+          stampDrag.current = [r, c];
+        }
+      }
       return;
     }
     const sd = sdrag.current;
@@ -155,6 +192,7 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   const up = () => {
     drag.current = null;
     sdrag.current = null;
+    stampDrag.current = null;
   };
 
   const box = floating ?? (tool === 'select' ? sel : null);
@@ -168,6 +206,8 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
         onPointerUp={up}
         onPointerCancel={up}
         onPointerLeave={() => setHover(null)}
+        // Mac の Ctrl + クリックは右クリックのメニューになるので、キャンバスの上では出さない
+        onContextMenu={(e) => e.preventDefault()}
       />
       {box && (
         <div

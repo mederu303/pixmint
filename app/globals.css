@@ -305,3 +305,18 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 .stamp-thumb { width: 100%; height: auto; image-rendering: pixelated; }
 .sect.stamps { display: flex; flex-direction: column; gap: 8px; }
 .dl-btn.off { opacity: 0.6; }
+
+/* ロゴ（押すとクレジット） */
+header button.logo { background: none; border: 0; box-shadow: none; padding: 0; cursor: pointer; text-transform: none; }
+
+/* クレジット: スタンプが跳ねる背景の上に、ロゴ・バージョン・リンク */
+.credits-box { position: relative; width: min(460px, 100%); max-height: 100%; overflow: auto; border: 1px solid var(--line-hi); background: #07070f; box-shadow: 0 0 60px rgba(0, 255, 65, 0.12); }
+.credits-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+.credits-body { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 24px 24px; text-align: center; background: radial-gradient(ellipse at center, rgba(7, 7, 15, 0.82) 0%, rgba(7, 7, 15, 0.55) 70%, transparent 100%); }
+.credits-logo { font: 700 34px/1 var(--font-logo); color: var(--accent); letter-spacing: 0.04em; text-shadow: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 28px rgba(0, 255, 65, 0.3); }
+.credits-tag { margin: 4px 0; font-size: 13px; }
+.credits-list { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 12px; text-align: left; }
+.credits-list dt { color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; padding-top: 2px; }
+.credits-list dd { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.credits-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.credits-links a.tool { text-decoration: none; font-size: 11px; background: rgba(5, 6, 20, 0.75); }

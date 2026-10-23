@@ -153,8 +153,9 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: 'Stamps',
           a: [
-            '- Choose Stamp (T), pick one of the 12 original pixel stamps, and click the canvas. A faint preview shows where it lands.',
+            '- Choose Stamp (T), pick one of the 12 original pixel stamps, and click the canvas. Drag to stamp a trail like a brush. A faint preview shows where it lands.',
             '- R rotates 90°, F flips left-right, and 1× / 2× sets the size.',
+            '- Hold Ctrl while clicking to flip just that stamp, and Shift to make it 2×.',
             '- Parts of each stamp take your current color, so you can tint them. Outlines and small details keep their own colors.',
           ],
         },
@@ -350,8 +351,9 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         {
           q: 'スタンプ',
           a: [
-            '- 「スタンプ」（T）を選び、12種類のオリジナルのドット絵から1つ選んで、キャンバスをクリックします。押す位置に薄く下見が出ます。',
+            '- 「スタンプ」（T）を選び、12種類のオリジナルのドット絵から1つ選んで、キャンバスをクリックします。ドラッグするとブラシのように続けて押せます。押す位置に薄く下見が出ます。',
             '- R で 90° 回す、F で左右反転、1× / 2× で大きさを変えます。',
+            '- Ctrl を押しながらクリックするとその1回だけ左右反転、Shift を押しながらだと 2 倍になります。',
             '- スタンプの一部は今の色に染まります。輪郭や細かい部分は、もとの色のままです。',
           ],
         },

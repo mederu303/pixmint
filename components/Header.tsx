@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { Name } from './Name';
+import { Credits } from './Credits';
 import { TEST_WALLETS, TEST_WALLET_KEY } from '../app/providers';
 import { LangToggle, useI18n } from '../lib/i18n';
 import { PIX_CHAINS } from '../lib/chains';
@@ -12,11 +13,16 @@ import { TESTNETS } from '../lib/cost';
 export function Header() {
   const path = usePathname();
   const { t } = useI18n();
+  const [credits, setCredits] = useState(false);
+  // クレジットは <header> の外に置く（header の backdrop-filter の中だと position: fixed が閉じ込められる）
   return (
+    <>
     <header>
-      <Link href="/" className="logo">
+      {/* ロゴを押すとクレジット（描く画面へは PIX から） */}
+      <button className="logo" onClick={() => setCredits(true)} title={t('credits.open')} aria-haspopup="dialog">
         pixmint
-      </Link>
+      </button>
+
       <nav>
         <Link href="/" className={path === '/' ? 'on' : ''} title={t('nav.drawTip')}>
           {t('nav.draw')}
@@ -31,6 +37,8 @@ export function Header() {
       <Wallet />
       <LangToggle />
     </header>
+    {credits && <Credits onClose={() => setCredits(false)} />}
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixCanvas, StampThumb, Swatches, ToolIcon, stampOrigin } from '../components/Editor';
+import { PixCanvas, StampThumb, Swatches, ToolIcon, stampOrigin, type StampMods } from '../components/Editor';
 import { STAMPS, flip as flipG, rotate as rotateG, scale as scaleG, stampGrid } from '../lib/stamps';
 import { setSound, sfx, soundOn } from '../lib/sound';
 import { ImportDialog } from '../components/ImportDialog';
@@ -206,11 +206,28 @@ export default function Studio() {
     if (stampFlip) g = flipG(g);
     return scaleG(g, stampScale);
   }, [stampId, stampRot, stampFlip, stampScale, color]);
-  const doStamp = (r: number, c: number) => {
-    beginStroke();
-    const [r0, c0] = stampOrigin([r, c], stampG);
-    setGrid((g) => stamp(g, { r: r0, c: c0, h: stampG.length, w: stampG[0].length, cells: stampG }));
-    sfx.stamp();
+  // Ctrl を押しながら = 左右反転、Shift を押しながら = 2 倍（その 1 回だけ。ボタンの設定に重ねる）
+  const stampFor = useCallback(
+    (m: StampMods) => {
+      let g = stampG;
+      if (m.flip) g = flipG(g);
+      if (m.big) g = scaleG(g, 2);
+      return g;
+    },
+    [stampG],
+  );
+  const lastStampSound = useRef(0);
+  const doStamp = (r: number, c: number, continuing: boolean, m: StampMods) => {
+    if (!continuing) beginStroke(); // ドラッグで続けて押した分は、戻すとき 1 回にまとめる
+    const sg = stampFor(m);
+    const [r0, c0] = stampOrigin([r, c], sg);
+    setGrid((g) => stamp(g, { r: r0, c: c0, h: sg.length, w: sg[0].length, cells: sg }));
+    // 続けて押すときは音を間引く（うるさくならないように）
+    const now = performance.now();
+    if (!continuing || now - lastStampSound.current > 120) {
+      sfx.stamp();
+      lastStampSound.current = now;
+    }
   };
 
   const openImage = async (file: Blob | null | undefined) => {
@@ -540,6 +557,7 @@ export default function Studio() {
           onMoveFloating={(r, c) => setFloating((f) => (f ? { ...f, r, c } : f))}
           onCommit={commit}
           stamp={stampG}
+          stampFor={stampFor}
           onStamp={doStamp}
         />
       </div>

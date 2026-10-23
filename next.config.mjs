@@ -1,6 +1,21 @@
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+
+// クレジット画面に出すバージョンとビルド番号（Vercel では push したコミット、手元では git の今のコミット）
+const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+let build = (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7);
+if (!build) {
+  try {
+    build = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    build = 'dev';
+  }
+}
+
 /** @type {import('next').NextConfig} */
 export default {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_VERSION: pkg.version, NEXT_PUBLIC_BUILD: build },
   // セキュリティヘッダー: 他サイトの iframe に埋め込ませない（mint / 購入ボタンを押させるクリックジャッキング対策）など
   async headers() {
     return [
