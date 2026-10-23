@@ -26,7 +26,7 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
     kind: 'idle',
   });
 
-  const { isConnected, chainId: walletChain } = useAccount();
+  const { isConnected, address, chainId: walletChain } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
 
@@ -54,8 +54,34 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
     };
   }, [chainId]);
 
-  const gas = encoded.bytes ? estimateMintGas(encoded.bytes.length, titleBytes) : 0;
-  const fee = gasPrice != null ? BigInt(gas) * gasPrice : null;
+  // gas はチェーンに聞く（Glamsterdam のような料金改定に追従するため）。聞けないときだけ式で概算
+  const [chainGas, setChainGas] = useState<bigint | null>(null);
+  useEffect(() => {
+    setChainGas(null);
+    const p = pixChain(chainId);
+    if (!p || !encoded.bytes || titleBad) return;
+    let live = true;
+    const bytes = encoded.bytes;
+    const timer = setTimeout(() => {
+      client(chainId)
+        .estimateContractGas({
+          address: p.address,
+          abi: PIXMINT_ABI,
+          functionName: 'mint',
+          args: [toHex(bytes), title.trim(), royalty],
+          value: mintPrice,
+          account: address ?? '0x000000000000000000000000000000000000dEaD',
+        })
+        .then((g) => live && setChainGas(g))
+        .catch(() => {});
+    }, 500);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [chainId, encoded.bytes, title, titleBad, royalty, mintPrice, address]);
+  const gas = chainGas ?? (encoded.bytes ? BigInt(estimateMintGas(encoded.bytes.length, titleBytes)) : 0n);
+  const fee = gasPrice != null ? gas * gasPrice : null;
 
   async function mint() {
     if (!encoded.bytes) return;

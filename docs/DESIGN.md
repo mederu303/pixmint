@@ -62,7 +62,24 @@ mederu X とは別プロジェクト。
 
 ETH の手数料 = gas × ガス価格。例: ガス価格 1 gwei なら 32×32 で 0.00024 ETH。
 Base は L2 の実行費 + L1 データ費で、同じ絵がおおむね桁違いに安い（テストネットで実測する）。
-コントラクトの deploy は約 241万 gas（チェーンごとに1回）。
+コントラクトの deploy は約 **370万 gas**（チェーンごとに1回。2026-10-23 に mainnet / Base / Base Sepolia で見積もり、ローカルで実測）。
+
+### Glamsterdam 後の gas（2026-10-23 Sepolia で実測）
+
+Sepolia は 2026-10-06 に次のアップグレード Glamsterdam が入っている。EIP-8037（state を作る gas の値上げ）で、
+**1作品ごとに SSTORE2 のコントラクトを作る pixmint の mint は約 4.4 倍**になる。メインネットに入る時期は未確認。
+
+| 絵（scripts/test-mint.mjs の模様） | データ | 今の料金（ローカル） | Glamsterdam（Sepolia） |
+|---|---|---|---|
+| 8×8・38ラン | 100 B | 24.0万 | 106.0万 |
+| 32×32・171ラン | 366 B | 31.1万 | 132.3万 |
+| 64×64・339ラン | 702 B | 44.3万 | 190.2万 |
+| アプリから MetaMask で mint（#4） | 306 B | — | 110.5万 |
+| deploy | 16.0KB | 370万 | **2,568万** |
+
+- `tokenURI` の読み出し（無料の eth_call）は Sepolia で 32×32 が 74万・64×64 が 141万。大きくは変わらない
+- アプリの「GAS (ESTIMATE)」は `estimateContractGas` でチェーンに聞く（式 `estimateMintGas` は聞けないときの予備）
+- ガス価格が同じなら、Glamsterdam 後は ETH での mint が今の約 4 倍の値段。Base に同じ改定が入るかは OP Stack 次第（未確認）
 
 ## 4. コントラクト API（`contracts/PixMint.sol`）
 
@@ -79,7 +96,7 @@ Base は L2 の実行費 + L1 データ費で、同じ絵がおおむね桁違�
 
 - 壊れたデータ・制御文字入りタイトル・10% 超のロイヤリティは mint の時点で revert
 - タイトルとロイヤリティは mint 後に変更できない
-- コントラクト本体は 15.3KB（上限 24KB）。deploy 約 352万 gas
+- コントラクト本体は 16.0KB（上限 24KB）。deploy 約 370万 gas（Glamsterdam 後は約 2,570万）
 - ETH / Base とも**同じバイトコード**を deploy する
 
 ## 5. 収益とロイヤリティ（2026-10-23 決定）
@@ -109,7 +126,10 @@ Base は L2 の実行費 + L1 データ費で、同じ絵がおおむね桁違�
 | buy | 9.6万 |
 
 ## 6. 表示と販売の場所
-- **OpenSea**: ERC-721 + オンチェーン tokenURI なので、ETH・Base とも何もしなくても表示・売買できる（要テストネット確認）
+- **OpenSea**: ERC-721 + オンチェーン tokenURI なので、ETH・Base とも何もしなくても表示・売買できるはず。
+  ⚠️ OpenSea は 2025-07 にテストネット対応をやめた（testnets.opensea.io は終了）ので、テストネットでは確かめられない。
+  Sepolia で tokenURI（name・image の SVG・attributes・external_url）と contractURI・royaltyInfo が正しいことは確認済み（2026-10-23）。
+  OpenSea での表示はメインネットに置いてから確認する
 - **pixmint の一覧ページ**: `Minted` / `Listed` / `Sold` イベントを読んで一覧を作り、その場で `buy` できる。
   ここで売れたものだけ mederu 手数料と作者ロイヤリティが確実に入る
 
