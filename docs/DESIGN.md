@@ -111,9 +111,12 @@ Base Sepolia の gas はローカルと同じ（Glamsterdam は入っていな�
 | `claim()` | 送金に失敗して預かった分の引き出し |
 | owner: `setMintPrice` / `setFeeBps`（上限5%）/ `setMintOpen` / `setSiteURL` / `withdraw` | **作品データには触れない**。withdraw は mederu の取り分だけ |
 
-- 壊れたデータ・制御文字入りタイトル・10% 超のロイヤリティは mint の時点で revert
+- 壊れたデータ・制御文字入りタイトル・**正しくない UTF-8**（overlong・サロゲート・途中で切れる等）・10% 超のロイヤリティは mint の時点で revert
+- 表示名（`setName`）は **「.」を含む名前と「0x」で始まる名前を拒む**（vitalik.eth・jesse.base.eth・短縮アドレスのなりすまし対策）。
+  アプリでも表示名は `@名前`＋点線で出して、検証済みの .eth / Basename と見分けられるようにしている
+- owner は **Ownable2Step**（`transferOwnership` → 相手が `acceptOwnership`）。メインネットの owner はハードウェアウォレットか Safe にする
 - タイトルとロイヤリティは mint 後に変更できない
-- コントラクト本体は 16.0KB（上限 24KB）。deploy 約 370万 gas（Glamsterdam 後は約 2,570万）
+- コントラクト本体は 17.1KB（上限 24KB）。deploy 約 389万 gas（Glamsterdam 後は約 2,730万）
 - ETH / Base とも**同じバイトコード**を deploy する
 
 ## 5. 収益とロイヤリティ（2026-10-23 決定）
