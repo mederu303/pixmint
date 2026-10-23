@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixCanvas, Swatches, ToolIcon } from '../components/Editor';
 import { ImportDialog } from '../components/ImportDialog';
 import { loadImage } from '../lib/convert';
@@ -257,10 +257,13 @@ export default function Studio() {
     };
   });
 
+  // 見えているとおりの絵（確定前の浮いた絵も含む）。mint・プレビュー・PNG はこれを使う（浮いたまま mint すると絵が抜けていた）
+  const shown = useMemo(() => (floating ? stamp(grid, floating) : grid), [grid, floating]);
+
   const toolLabel = (id: string) => t(`tool.${id}` as 'tool.pen');
 
   const download = async () => {
-    const blob = await exportPng(grid, bg);
+    const blob = await exportPng(shown, bg);
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -444,7 +447,7 @@ export default function Studio() {
         />
       )}
 
-      <MintPanel grid={grid} bg={bg} />
+      <MintPanel grid={shown} bg={bg} />
     </div>
   );
 }
