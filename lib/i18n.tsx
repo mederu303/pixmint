@@ -93,6 +93,8 @@ const en = {
   'me.ph': 'e.g. medenyan',
   'me.saveChain': 'Chain to save on (each chain keeps its own name)',
   'me.save': 'Save on {chain}',
+  'me.badChars': 'Names can\'t contain "." or start with "0x" (so they can\'t be mistaken for an ENS name or address).',
+  'name.pixTip': 'pixmint display name — set by the artist, not verified',
 };
 
 type Key = keyof typeof en;
@@ -188,6 +190,8 @@ const ja: Record<Key, string> = {
   'me.ph': '例: medenyan',
   'me.saveChain': '保存するチェーン（チェーンごとに別々に保存されます）',
   'me.save': '{chain} に保存',
+  'me.badChars': '「.」を含む名前と「0x」で始まる名前は使えません（.eth の名前やアドレスと見分けがつかなくなるため）。',
+  'name.pixTip': 'pixmint の表示名（作者が自分で付けた名前・検証なし）',
 };
 
 export type Lang = 'en' | 'ja';

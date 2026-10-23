@@ -10,6 +10,12 @@ import { base, mainnet } from 'viem/chains';
 import { PIX_CHAINS, pixChain } from './chains';
 import { PIXMINT_ABI, client } from './contract';
 
+/** kind: 'pix' = 作者が自分で付けた表示名（検証なし）/ 'ens' = .eth・Basename（逆引き＋正引きで照合済み） */
+export type ResolvedName = { name: string; kind: 'pix' | 'ens' };
+
+/** コントラクトと同じ規則: "." を含む・"0x" で始まる表示名は ENS / アドレスのなりすましになるので出さない */
+export const isSafeDisplayName = (n: string) => !n.includes('.') && !/^0x/i.test(n);
+
 let ens: PublicClient | null = null;
 let baseClient: PublicClient | null = null;
 
@@ -37,7 +43,8 @@ async function basename(address: `0x${string}`): Promise<string | null> {
     return null;
   }
 }
-const cache = new Map<string, Promise<string | null>>();
+
+const cache =new Map<string, Promise<ResolvedName | null>>();
 
 async function pixName(address: `0x${string}`, preferChainId?: number): Promise<string | null> {
   const ids = PIX_CHAINS.map((p) => p.chain.id).sort((a, b) => (a === preferChainId ? -1 : b === preferChainId ? 1 : 0));
@@ -49,7 +56,7 @@ async function pixName(address: `0x${string}`, preferChainId?: number): Promise<
         functionName: 'displayName',
         args: [address],
       })) as string;
-      if (n) return n;
+      if (n && isSafeDisplayName(n)) return n;
     } catch {}
   }
   return null;
@@ -71,12 +78,16 @@ async function ensName(address: `0x${string}`): Promise<string | null> {
   return basename(address); // RPC に届かない（ローカル開発など）ときは null → 短縮アドレスのまま
 }
 
-export function lookupName(address: string, preferChainId?: number): Promise<string | null> {
+export function lookupName(address: string, preferChainId?: number): Promise<ResolvedName | null> {
   const key = `${address.toLowerCase()}:${preferChainId ?? ''}`;
   let p = cache.get(key);
   if (!p) {
     const a = address as `0x${string}`;
-    p = pixName(a, preferChainId).then((n) => n ?? ensName(a));
+    p = pixName(a, preferChainId).then(async (n): Promise<ResolvedName | null> => {
+      if (n) return { name: n, kind: 'pix' };
+      const e = await ensName(a);
+      return e ? { name: e, kind: 'ens' } : null;
+    });
     cache.set(key, p);
   }
   return p;

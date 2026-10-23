@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { NAME_EVENT, lookupName } from '../lib/names';
+import { NAME_EVENT, lookupName, type ResolvedName } from '../lib/names';
 import { short } from '../lib/contract';
+import { useI18n } from '../lib/i18n';
 
-/** 表示名 → .eth → Basename → 0x1234…abcd */
+/** 表示名 → .eth → Basename → 0x1234…abcd。表示名（作者が自分で付けた・検証なし）は見た目を変えて ENS と区別する */
 export function Name({ address, chainId, href, refresh }: { address: string; chainId?: number; href?: string; refresh?: number }) {
-  const [name, setName] = useState<string | null>(null);
+  const { t } = useI18n();
+  const [name, setName] = useState<ResolvedName | null>(null);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const on = (e: Event) => (e as CustomEvent).detail === address.toLowerCase() && setTick((t) => t + 1);
@@ -20,12 +22,17 @@ export function Name({ address, chainId, href, refresh }: { address: string; cha
       live = false;
     };
   }, [address, chainId, refresh, tick]);
-  const label = name ?? short(address);
+  const label = name ? (
+    <span className={name.kind === 'pix' ? 'pixname' : undefined}>{name.name}</span>
+  ) : (
+    short(address)
+  );
+  const title = name?.kind === 'pix' ? `${t('name.pixTip')}\n${address}` : address;
   return href ? (
-    <a href={href} title={address}>
+    <a href={href} title={title}>
       {label}
     </a>
   ) : (
-    <span title={address}>{label}</span>
+    <span title={title}>{label}</span>
   );
 }

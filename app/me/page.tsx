@@ -5,7 +5,7 @@ import { Wallet } from '../../components/Header';
 import { Name } from '../../components/Name';
 import { LABEL, PIX_CHAINS, pixChain } from '../../lib/chains';
 import { PIXMINT_ABI, client } from '../../lib/contract';
-import { forgetName } from '../../lib/names';
+import { forgetName, isSafeDisplayName } from '../../lib/names';
 import { useTx } from '../../lib/useTx';
 import { useI18n } from '../../lib/i18n';
 
@@ -57,7 +57,8 @@ export default function Me() {
   }
 
   const bytes = enc.encode(name).length;
-  const bad = bytes > MAX || /[\u0000-\u001f\u007f]/.test(name);
+  const unsafe = !isSafeDisplayName(name.trim());
+  const bad = bytes > MAX || /[\u0000-\u001f\u007f]/.test(name) || unsafe;
 
   return (
     <div className="stack" style={{ maxWidth: 480 }}>
@@ -80,6 +81,7 @@ export default function Me() {
         <span className={`note ${bad ? 'bad' : ''}`}>
           {t('mint.bytes', { n: bytes, max: MAX })} · 日本語 / JP = 3 bytes/char
         </span>
+        {unsafe && <span className="note bad">{t('me.badChars')}</span>}
         <div className="stack" style={{ gap: 4 }}>
           <span className="note">{t('me.saveChain')}</span>
           <div className="chips">

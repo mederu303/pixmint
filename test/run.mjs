@@ -7,7 +7,7 @@ import solc from 'solc';
 import { VM } from '@ethereumjs/vm';
 import { Common, Chain, Hardfork } from '@ethereumjs/common';
 import { Address, Account, hexToBytes, bytesToHex } from '@ethereumjs/util';
-import { encodeFunctionData, decodeFunctionResult, encodeDeployData } from 'viem';
+import { encodeFunctionData, decodeFunctionResult, encodeDeployData, encodeAbiParameters, toFunctionSelector, concatHex } from 'viem';
 import { encodePxm, pxmToSvg, validatePxm } from '../src/pxm.ts';
 
 const require = createRequire(import.meta.url);
@@ -226,11 +226,57 @@ check('reject name with newline', !(await tx('setName', ['a\nb'])).ok);
 check('clear name', (await tx('setName', [''])).ok);
 const m3 = JSON.parse(Buffer.from((await view('tokenURI', [M])).v.split(',')[1], 'base64').toString());
 check('no Artist attribute when empty', !m3.attributes.some((a) => a.trait_type === 'Artist'));
+// 表示名のなりすまし対策（. を含む・0x で始まる名前は不可）
+check('reject name vitalik.eth', !(await tx('setName', ['vitalik.eth'])).ok);
+check('reject name jesse.base.eth', !(await tx('setName', ['jesse.base.eth'])).ok);
+check('reject name with "."', !(await tx('setName', ['a.b'])).ok);
+check('reject name 0xC9DE…0C08', !(await tx('setName', ['0xC9DE…0C08'])).ok);
+check('reject name 0Xabc', !(await tx('setName', ['0Xabc'])).ok);
+check('accept name "0" / "x0x" / 日本語・絵文字', (await tx('setName', ['0'])).ok && (await tx('setName', ['x0x'])).ok && (await tx('setName', ['めでにゃん🐱'])).ok);
+await tx('setName', ['']);
+
+// 壊れた UTF-8 はタイトル・表示名とも拒む（JS の文字列からは作れないので calldata を手で組む）
+async function rawTx(sig, types, values) {
+  const data = hexToBytes(concatHex([toFunctionSelector(sig), encodeAbiParameters(types, values)]));
+  const r = await call({ to: pix, data });
+  return !r.execResult.exceptionError;
+}
+const pxmHex = bytesToHex(encodePxm(blobArt(8, 2)));
+const rawMint = (t) => rawTx('mint(bytes,string,uint16)', [{ type: 'bytes' }, { type: 'bytes' }, { type: 'uint16' }], [pxmHex, t, 0]);
+const rawName = (t) => rawTx('setName(string)', [{ type: 'bytes' }], [t]);
+const badUtf8 = {
+  '継続バイトだけ 80': '0x41804142',
+  'overlong C0 AF': '0xc0af',
+  'overlong E0 80 AF': '0xe080af',
+  'overlong F0 80 80 AF': '0xf08080af',
+  'サロゲート ED A0 80': '0xeda080',
+  'U+110000 F4 90 80 80': '0xf4908080',
+  'F5': '0xf5808080',
+  '途中で切れる E3 81': '0x41e381',
+  '継続バイト不足 E3 41 81': '0xe34181',
+};
+for (const [name, hex] of Object.entries(badUtf8)) {
+  check(`reject title UTF-8 ${name}`, !(await rawMint(hex)));
+  check(`reject name UTF-8 ${name}`, !(await rawName(hex)));
+}
+const goodUtf8 = { 'é C3 A9': '0xc3a9', 'あ E3 81 82': '0xe38182', 'U+FFFD EF BF BD': '0xefbfbd', '🐱 F0 9F 90 B1': '0xf09f90b1', 'U+10FFFF F4 8F BF BF': '0xf48fbfbf' };
+for (const [name, hex] of Object.entries(goodUtf8)) check(`accept title UTF-8 ${name}`, await rawMint(hex));
+check('reject title with DEL 7F', !(await rawMint('0x417f')));
+
 // owner
 check('fee cap 5%', !(await tx('setFeeBps', [501])).ok && (await tx('setFeeBps', [500])).ok);
 check('non-owner cannot withdraw', !(await tx('withdraw', [bob.toString()], { from: bob })).ok);
 const m0 = await bal(mederu);
 check('withdraw platformBalance', (await tx('withdraw', [mederu.toString()])).ok && (await bal(mederu)) - m0 === (E * 75n) / 1000n);
+
+// owner の譲渡は2段階（Ownable2Step）
+const ownerIs = async (a) => (await view('owner', [])).v.toLowerCase() === a.toString();
+check('non-owner cannot transferOwnership', !(await tx('transferOwnership', [carol.toString()], { from: bob })).ok);
+check('transferOwnership → まだ owner は alice', (await tx('transferOwnership', [bob.toString()])).ok && (await ownerIs(alice)));
+check('pendingOwner = bob', (await view('pendingOwner', [])).v.toLowerCase() === bob.toString());
+check('carol cannot acceptOwnership', !(await tx('acceptOwnership', [], { from: carol })).ok);
+check('bob acceptOwnership → owner = bob', (await tx('acceptOwnership', [], { from: bob })).ok && (await ownerIs(bob)));
+check('alice is no longer owner', !(await tx('setMintOpen', [false])).ok && (await tx('setMintOpen', [true], { from: bob })).ok);
 
 console.log(fail ? `\nFAILED: ${fail}` : '\nALL OK');
 process.exit(fail ? 1 : 0);

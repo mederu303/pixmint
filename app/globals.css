@@ -224,3 +224,7 @@ header nav a { white-space: nowrap; }
 input::placeholder { color: #8e8ba6; opacity: 1; }
 footer a.brand { text-transform: none; color: var(--accent); text-decoration: none; }
 footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 255, 65, 0.5); }
+
+/* 作者が自分で付けた表示名（検証なし）。.eth / Basename と見分けられるように点線の下線 */
+.pixname { text-decoration: underline dotted var(--dim); text-underline-offset: 3px; }
+.pixname::before { content: '@'; color: var(--dim); }

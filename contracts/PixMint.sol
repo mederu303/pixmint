@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -15,11 +16,13 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 ///         販売機能を内蔵している。ここで売れたときは mederu の手数料と作者のロイヤリティが
 ///         必ず差し引かれる。OpenSea など外部では ERC-2981 で作者分だけを申告する（支払いは任意）。
 /// @dev ETH / Base とも同じバイトコードで出す。形式は src/pxm.ts を参照。
-contract PixMint is ERC721, Ownable, ReentrancyGuard {
+///         owner の譲渡は2段階（transferOwnership → 相手が acceptOwnership）。打ち間違いで owner を失わない。
+contract PixMint is ERC721, Ownable2Step, ReentrancyGuard {
     using Strings for uint256;
 
     error BadData();
     error BadTitle();
+    error BadName();
     error BadRoyalty();
     error BadFee();
     error WrongPrice();
@@ -129,24 +132,59 @@ contract PixMint is ERC721, Ownable, ReentrancyGuard {
     // ───────────────────────── 表示名 ─────────────────────────
 
     /// @notice 自分の表示名を設定する（空文字で消す）。ENS / Basename が無い作者向け
+    /// @dev なりすまし対策: "." を含む名前（vitalik.eth・jesse.base.eth 風）と "0x" で始まる名前（アドレス風）は拒む
     function setName(string calldata name) external {
-        if (bytes(name).length > MAX_NAME) revert BadTitle();
-        _validateText(bytes(name));
+        bytes calldata n = bytes(name);
+        if (n.length > MAX_NAME) revert BadName();
+        if (n.length >= 2 && n[0] == "0" && (n[1] == "x" || n[1] == "X")) revert BadName();
+        for (uint256 i; i < n.length; ++i) if (n[i] == ".") revert BadName();
+        if (!_validText(n)) revert BadName();
         displayName[msg.sender] = name;
         emit NameSet(msg.sender, name);
     }
 
-    /// @dev 制御文字（0x00-0x1f, 0x7f）を拒む。" と \ は tokenURI でエスケープする
     function _validateTitle(bytes calldata t) internal pure {
-        if (t.length > MAX_TITLE) revert BadTitle();
-        _validateText(t);
+        if (t.length > MAX_TITLE || !_validText(t)) revert BadTitle();
     }
 
-    function _validateText(bytes calldata t) internal pure {
-        for (uint256 i; i < t.length; ++i) {
+    /// @dev 正しい UTF-8（overlong・サロゲート・U+10FFFF 超えは不可）で、制御文字（0x00-0x1f, 0x7f）が無いこと。
+    ///      " と \ は tokenURI でエスケープする。壊れた UTF-8 は JSON として読めなくなるので mint 時に拒む
+    function _validText(bytes calldata t) internal pure returns (bool) {
+        uint256 n = t.length;
+        uint256 i;
+        while (i < n) {
             uint8 c = uint8(t[i]);
-            if (c < 0x20 || c == 0x7f) revert BadTitle();
+            if (c < 0x80) {
+                if (c < 0x20 || c == 0x7f) return false;
+                ++i;
+                continue;
+            }
+            uint256 len;
+            uint8 lo = 0x80;
+            uint8 hi = 0xbf;
+            if (c >= 0xc2 && c <= 0xdf) {
+                len = 2;
+            } else if (c >= 0xe0 && c <= 0xef) {
+                len = 3;
+                if (c == 0xe0) lo = 0xa0; // overlong
+                else if (c == 0xed) hi = 0x9f; // サロゲート U+D800-DFFF
+            } else if (c >= 0xf0 && c <= 0xf4) {
+                len = 4;
+                if (c == 0xf0) lo = 0x90; // overlong
+                else if (c == 0xf4) hi = 0x8f; // U+10FFFF 超え
+            } else {
+                return false; // 0x80-0xc1（継続バイト・overlong）と 0xf5 以上
+            }
+            if (i + len > n) return false;
+            uint8 c1 = uint8(t[i + 1]);
+            if (c1 < lo || c1 > hi) return false;
+            for (uint256 k = 2; k < len; ++k) {
+                uint8 ck = uint8(t[i + k]);
+                if (ck < 0x80 || ck > 0xbf) return false;
+            }
+            i += len;
         }
+        return true;
     }
 
     // ───────────────────────── 読み出し ─────────────────────────
