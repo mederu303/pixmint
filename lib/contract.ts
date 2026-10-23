@@ -84,3 +84,42 @@ export const estimateMintGas = (bytes: number, titleBytes: number) => 130_000 + 
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 export const svgUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+
+// ── 同じ絵がもう mint されているか（コントラクトは二重 mint を止めないので、アプリで知らせる） ──
+// works(id) のサイズ・色数が同じものだけ data(id) を読んで比べる。読んだものはチェーンごとに覚えておく
+const known = new Map<number, Map<bigint, { size: number; colors: number; data?: string }>>();
+
+/** 同じデータの作品の id（新しい順）。無ければ空 */
+export async function findSameArt(chainId: number, pxmHex: string, size: number, colors: number): Promise<bigint[]> {
+  const c = client(chainId);
+  const address = pixChain(chainId)!.address;
+  let m = known.get(chainId);
+  if (!m) known.set(chainId, (m = new Map()));
+  const total = await readTotal(chainId);
+  const missing: bigint[] = [];
+  for (let id = 1n; id <= total; id++) if (!m.has(id)) missing.push(id);
+  // batch: true なので、まとめて1回の JSON-RPC になる
+  await Promise.all(
+    missing.map(async (id) => {
+      const w = (await c.readContract({ address, abi: PIXMINT_ABI, functionName: 'works', args: [id] })) as [
+        string,
+        number,
+        number,
+        number,
+        number,
+      ];
+      m!.set(id, { size: w[2], colors: w[3] });
+    }),
+  );
+  const target = pxmHex.toLowerCase();
+  const hits: bigint[] = [];
+  await Promise.all(
+    [...m.entries()]
+      .filter(([, w]) => w.size === size && w.colors === colors)
+      .map(async ([id, w]) => {
+        w.data ??= ((await c.readContract({ address, abi: PIXMINT_ABI, functionName: 'data', args: [id] })) as string).toLowerCase();
+        if (w.data === target) hits.push(id);
+      }),
+  );
+  return hits.sort((a, b) => (a < b ? 1 : -1));
+}

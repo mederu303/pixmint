@@ -6,7 +6,7 @@ import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import { Wallet } from './Header';
 import { encodePxm, pxmToSvg, validatePxm, PXM_MAX_RUNS } from '../src/pxm';
 import { LABEL, PIX_CHAINS, pixChain } from '../lib/chains';
-import { PIXMINT_ABI, client, estimateMintGas, readNum, svgUrl } from '../lib/contract';
+import { PIXMINT_ABI, client, estimateMintGas, findSameArt, readNum, svgUrl } from '../lib/contract';
 import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cost';
 import { flatten, type PixGrid } from '../lib/pix';
 import { useI18n } from '../lib/i18n';
@@ -65,10 +65,31 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
   // ここは実際にウォレットで払う額（テストネットならテストネットのガス価格）。下の比べる欄はメインネット換算
   const gasPrice = cur?.ownGasPrice ?? null;
   const fee = cur?.ownTotal != null ? cur.ownTotal - mintPrice : gasPrice != null ? gas * gasPrice : null;
+  // 同じ絵がこのチェーンでもう mint されていないか（絵・チェーンが変わったら 0.8 秒待って調べる。mint の直後にも調べ直す）
+  const [same, setSame] = useState<bigint[]>([]);
+  const [sameTick, setSameTick] = useState(0);
+  useEffect(() => {
+    setSame([]);
+    if (!encoded.bytes || !encoded.info || !pixChain(chainId)) return;
+    let live = true;
+    const { size, colors } = encoded.info;
+    const hex = toHex(encoded.bytes);
+    const timer = setTimeout(() => {
+      findSameArt(chainId, hex, size, colors)
+        .then((ids) => live && setSame(ids))
+        .catch(() => {});
+    }, 800);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [chainId, encoded.bytes, encoded.info, sameTick]);
   const hint = useMemo(() => colorHint(grid, bg, encoded.bytes?.length ?? 0), [grid, bg, encoded.bytes]);
 
   async function mint() {
     if (!encoded.bytes) return;
+    if (same.length && !window.confirm(t('mint.sameConfirm', { ids: same.map((i) => `#${i}`).join(', '), chain: LABEL[chainId] ?? '' })))
+      return;
     const p = pixChain(chainId)!;
     try {
       setStatus({ kind: 'busy', text: t('mint.confirm') });
@@ -88,6 +109,7 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
         | { args: { id: bigint } }
         | undefined;
       setStatus({ kind: 'ok', text: t('mint.done'), id: ev?.args.id });
+      setSameTick((n) => n + 1);
     } catch (e) {
       const msg = (e as { shortMessage?: string; message: string }).shortMessage ?? (e as Error).message;
       setStatus({ kind: 'bad', text: msg.split('\n')[0] });
@@ -206,6 +228,17 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
         </p>
         {OP_CHAINS.includes(chainId) ? <p className="note">{t('mint.baseNote')}</p> : null}
 
+        {same.length > 0 && (
+          <p className="note warn">
+            {t('mint.same', { chain: LABEL[chainId] ?? '' })}{' '}
+            {same.slice(0, 5).map((i) => (
+              <span key={i.toString()}>
+                <Link href={`/${chainId}/${i}`}>#{i.toString()}</Link>{' '}
+              </span>
+            ))}
+            {same.length > 5 && `+${same.length - 5}`}
+          </p>
+        )}
         {isConnected ? (
           <button onClick={mint} disabled={!ready}>
             {status.kind === 'busy' ? t('mint.busy') : t('mint.button', { chain: LABEL[chainId] ?? '' })}
