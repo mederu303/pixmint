@@ -6,6 +6,7 @@ import { LABEL, PIX_CHAINS } from '../../lib/chains';
 import { Name } from '../../components/Name';
 import { useI18n } from '../../lib/i18n';
 import { readNum, readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
+import { saveOrder } from '../../lib/order';
 
 const PAGE = 24;
 /** OpenSea のコレクション。/assets/<chain>/<contract> はコレクションのページへ転送される（slug を変えてもリンクが切れない） */
@@ -186,7 +187,7 @@ export default function Gallery() {
       {loaded && count === 0 && <p className="note">{t('gallery.empty')}</p>}
       <div className="grid">
         {list.map((w) => (
-          <Link key={`${w.chainId}-${w.id}`} href={`/${w.chainId}/${w.id}`} className="card">
+          <Link key={`${w.chainId}-${w.id}`} href={`/${w.chainId}/${w.id}`} className="card" onClick={() => saveOrder(list)}>
             <img src={svgUrl(w.svg)} alt={w.title} />
             <div className="t">
               <span>{w.title}</span>

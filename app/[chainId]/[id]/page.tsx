@@ -1,5 +1,6 @@
 'use client';
-import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { formatEther, parseEther } from 'viem';
 import { useAccount } from 'wagmi';
@@ -8,6 +9,7 @@ import { Name } from '../../../components/Name';
 import { LABEL, pixChain } from '../../../lib/chains';
 import { readNum, readWork, svgUrl, type WorkView } from '../../../lib/contract';
 import { useTx } from '../../../lib/useTx';
+import { neighbors } from '../../../lib/order';
 import { useI18n } from '../../../lib/i18n';
 
 const EXPLORER: Record<number, string> = {
@@ -30,6 +32,30 @@ export default function WorkPage() {
   const [priceIn, setPriceIn] = useState('');
   const { address, isConnected } = useAccount();
   const tx = useTx(chainId);
+  const router = useRouter();
+
+  // 前・次の作品（← → キーでも移れる。文字を入力しているときは効かない）
+  const [nav, setNav] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
+  useEffect(() => {
+    let live = true;
+    neighbors(chainId, id).then((n) => live && setNav(n));
+    return () => {
+      live = false;
+    };
+  }, [chainId, id]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const to = e.key === 'ArrowLeft' ? nav.prev : e.key === 'ArrowRight' ? nav.next : null;
+      if (to) {
+        e.preventDefault();
+        router.push(to);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [nav, router]);
 
   const load = useCallback(() => {
     if (!pixChain(chainId)) {
@@ -66,6 +92,23 @@ export default function WorkPage() {
     <div className="work">
       <img src={svgUrl(w.svg)} alt={w.title} />
       <div className="stack">
+        <div className="work-nav">
+          {nav.prev ? (
+            <Link className="tool" href={nav.prev} title={t('work.prev')} aria-label={t('work.prev')}>
+              ‹
+            </Link>
+          ) : (
+            <span className="tool off" aria-hidden>‹</span>
+          )}
+          {nav.next ? (
+            <Link className="tool" href={nav.next} title={t('work.next')} aria-label={t('work.next')}>
+              ›
+            </Link>
+          ) : (
+            <span className="tool off" aria-hidden>›</span>
+          )}
+          <span className="note">{t('work.navHint')}</span>
+        </div>
         <div>
           <h1>{w.title}</h1>
           <span className="note">

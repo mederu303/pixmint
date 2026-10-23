@@ -286,3 +286,9 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
   .coll-links { margin-left: 0; }
   .coll-avatar { width: 64px; height: 64px; }
 }
+
+/* 作品ページの前・次 */
+.work-nav { display: flex; align-items: center; gap: 6px; }
+.work-nav .tool { text-decoration: none; width: 34px; text-align: center; font-size: 16px; padding: 4px 0; }
+.work-nav .tool.off { opacity: 0.3; }
+.work-nav .note { margin-left: 6px; }
