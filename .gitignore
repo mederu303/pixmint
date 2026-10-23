@@ -11,3 +11,4 @@ out/
 # 手元のバックアップ（tgz）
 _archive/
 .DS_Store
+.vercel
