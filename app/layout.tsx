@@ -4,9 +4,25 @@ import { Providers } from './providers';
 import { Footer, Header, TestnetBanner } from '../components/Header';
 import './globals.css';
 
+const DESCRIPTION = 'Draw pixel art in your browser and mint it fully on-chain to Ethereum and Base. No server, no IPFS. pixmint by mederu.art';
+
+// リンクを貼ったときのカード（OGP・X）。画像は app/opengraph-image.png / twitter-image.png（1200×630）を Next が自動で付ける
 export const metadata: Metadata = {
+  metadataBase: new URL('https://pixmint.mederu.art'),
   title: 'pixmint',
-  description: 'Fully on-chain pixel art on Ethereum and Base — pixmint by mederu.art',
+  description: DESCRIPTION,
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'pixmint',
+    title: 'pixmint — every pixel lives on-chain',
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'pixmint — every pixel lives on-chain',
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
