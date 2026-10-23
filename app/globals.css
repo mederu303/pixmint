@@ -332,3 +332,7 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
 /* 暗い色は、色の四角の内側に白っぽい線を引いて形を見せる（今の色・背景色・パレット） */
 .chip.dark span { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
 .swatches button.dark { border-color: rgba(255, 255, 255, 0.45); }
+
+/* 選んでいる色が暗いときは、まわりの光る枠も白っぽく（緑だと暗い色に溶けて見えにくい） */
+.swatches button.on.dark { outline-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 10px rgba(255, 255, 255, 0.35); }
+.chip.big.dark { border-color: rgba(255, 255, 255, 0.85); box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
