@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { formatEther, parseEventLogs } from 'viem';
+import { formatEther, formatGwei, parseEventLogs } from 'viem';
 import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import { Wallet } from './Header';
 import { encodePxm, pxmToSvg, validatePxm, PXM_MAX_RUNS } from '../src/pxm';
@@ -47,10 +47,14 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
     if (!chainId) return;
     let live = true;
     setGasPrice(null);
-    client(chainId).getGasPrice().then((g) => live && setGasPrice(g)).catch(() => {});
+    // ガス価格はブロックごとに動くので 12 秒ごとに取り直す
+    const poll = () => client(chainId).getGasPrice().then((g) => live && setGasPrice(g)).catch(() => {});
+    poll();
+    const timer = setInterval(poll, 12_000);
     readNum(chainId, 'mintPrice').then((p) => live && setMintPrice(p)).catch(() => {});
     return () => {
       live = false;
+      clearInterval(timer);
     };
   }, [chainId]);
 
@@ -131,7 +135,8 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
             <b>{encoded.info.colors}</b>
             <span>{t('mint.runs')}</span>
             <b>
-              {encoded.info.runs.toLocaleString()} / {PXM_MAX_RUNS.toLocaleString()}
+              {encoded.info.runs.toLocaleString()} / {PXM_MAX_RUNS.toLocaleString()} (
+              {Math.round((encoded.info.runs / PXM_MAX_RUNS) * 100)}%)
             </b>
           </div>
         )}
@@ -181,7 +186,12 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
           <b>{mintPrice === 0n ? t('mint.free') : `${formatEther(mintPrice)} ETH`}</b>
           <span>{t('mint.gas')}</span>
           <b>{fee != null ? t('mint.about', { v: Number(formatEther(fee)).toPrecision(2) }) : '—'}</b>
+          <span>{t('mint.gasUnits')}</span>
+          <b>
+            {gas.toLocaleString()} gas{gasPrice != null && ` × ${Number(formatGwei(gasPrice)).toPrecision(2)} gwei`}
+          </b>
         </div>
+        <p className="note">{t('mint.live')}</p>
         {chainId === 8453 || chainId === 84532 ? (
           <p className="note">{t('mint.baseNote')}</p>
         ) : null}
