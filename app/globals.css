@@ -199,7 +199,8 @@ header nav a { white-space: nowrap; }
 
 /* ── ヘルプ ── */
 .help { max-width: 860px; margin: 0 auto; display: grid; gap: 18px; }
-.help .toc a { text-decoration: none; display: inline-block; border: 1px solid var(--line-hi); padding: 6px 10px; border-radius: 2px; color: var(--dim); font-size: 12px; }
+.help .toc { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+.help .toc a { text-decoration: none; display: block; border: 1px solid var(--line-hi); padding: 8px 12px; border-radius: 2px; color: var(--dim); font-size: 12px; }
 .help .toc a:hover { color: var(--accent); border-color: var(--accent); }
 .help section { scroll-margin-top: calc(var(--hdr) + 12px); display: grid; gap: 4px; }
 .help .lead { margin: 0 0 6px; color: var(--text); font-size: 13px; }
