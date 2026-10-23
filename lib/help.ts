@@ -59,7 +59,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
       items: [
         {
           q: 'How much does minting cost?',
-          a: ['Minting is free — you only pay the network gas. The panel on the Draw page shows an estimate before you mint.'],
+          a: ['Minting is free — you only pay the network gas. The panel on the Pix page shows the cost on each chain before you mint.'],
         },
         {
           q: 'How are sales on pixmint split?',
@@ -93,7 +93,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           q: 'Steps',
           a: [
             '- Connect a wallet (top right). Browser extensions such as MetaMask, Rabby or Phantom work.',
-            '- Draw your piece on the Draw page. The "On-chain image" preview shows exactly what will be stored.',
+            '- Draw your piece on the Pix page. The "On-chain image" preview shows exactly what will be stored.',
             '- Add a title (optional, up to 96 bytes — about 32 Japanese characters). Untitled works are named "pixmint #id".',
             '- Choose the resale royalty (0 / 2.5 / 5 / 7.5 / 10%).',
             '- Choose the chain (Ethereum or Base) and press Mint. Confirm in your wallet.',
@@ -116,7 +116,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
     },
     {
       id: 'draw',
-      title: 'Using Draw',
+      title: 'Using Pix (the drawing page)',
       items: [
         {
           q: 'Tools',
@@ -126,8 +126,11 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '| Eraser | Clears cells to the background color. |',
             '| Fill | Fills the connected area of the same color. |',
             '| Picker | Picks a color from the canvas, then switches back to Pen. |',
-            '| Undo | Steps back (up to 50). |',
-            '| Clear | Clears the whole canvas (can be undone). |',
+            '| Select | Drag a box to select. Drag inside it to move; copy, cut and paste with ⌘C / ⌘X / ⌘V. |',
+            '| Stamp | Stamps a pixel-art picture. See "Stamps" below. |',
+            '| Undo / Redo | Steps back and forward (up to 50 steps). |',
+            '| Image | Turns a PNG, JPEG or SVG into pixels (you can also drop or paste one onto the canvas). |',
+            '| Clear | Clears the whole canvas with a bang (can be undone). |',
           ],
         },
         {
@@ -141,12 +144,28 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         },
         {
           q: 'Grid size',
-          a: ['8×8 up to 128×128. Changing the size clears the canvas (you will be asked first).'],
+          a: [
+            '- 8, 16, 32, 48, 64, 96 or 128 cells square. Changing the size clears the canvas (you will be asked first).',
+            '- ODD adds one cell (9×9 up to 129×129) so there is a true center pixel, shown by a faint cross. Your drawing stays when you switch.',
+            '- For detailed illustrations, 96×96 is often the sweet spot.',
+          ],
+        },
+        {
+          q: 'Stamps',
+          a: [
+            '- Choose Stamp (T), pick one of the 12 original pixel stamps, and click the canvas. A faint preview shows where it lands.',
+            '- R rotates 90°, F flips left-right, and 1× / 2× sets the size.',
+            '- Parts of each stamp take your current color, so you can tint them. Outlines and small details keep their own colors.',
+          ],
+        },
+        {
+          q: 'Sound',
+          a: ['Stamps, fill, undo, redo and clear make little sounds. Turn them on or off with the Sound button at the bottom of the left column; the choice is remembered in this browser.'],
         },
         {
           q: 'Download PNG',
           a: [
-            'The button at the bottom of the left column saves a PNG scaled to about 2048px with crisp pixels (no blur) — ready to post on X and other social media. It is just a picture of your drawing; it does not mint anything.',
+            'The button at the bottom of the left column (or the S key) saves a PNG scaled to about 2048px with crisp pixels (no blur) — ready to post on X and other social media. It is just a picture of your drawing; it does not mint anything.',
           ],
         },
         {
@@ -239,7 +258,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
       items: [
         {
           q: 'mint にいくらかかる？',
-          a: ['mint は無料です。かかるのはネットワークのガス代だけ。描くページの右の欄に、mint 前に目安が出ます。'],
+          a: ['mint は無料です。かかるのはネットワークのガス代だけ。PIX（描くページ）の右の欄に、チェーンごとの費用が mint 前に出ます。'],
         },
         {
           q: 'pixmint での売上はどう分けられる？',
@@ -273,7 +292,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           q: '手順',
           a: [
             '- 右上でウォレットを接続します。MetaMask・Rabby・Phantom などのブラウザ拡張が使えます。',
-            '- 描くページで絵を描きます。右の「チェーンに載る絵」が、実際に保存される絵そのものです。',
+            '- PIX（描くページ）で絵を描きます。右の「チェーンに載る絵」が、実際に保存される絵そのものです。',
             '- タイトルを入れます（任意・96 bytes まで＝日本語で約32文字）。無題なら「pixmint #番号」になります。',
             '- 二次販売のロイヤリティを選びます（0 / 2.5 / 5 / 7.5 / 10%）。',
             '- チェーン（Ethereum か Base）を選んで mint を押し、ウォレットで確認します。',
@@ -294,7 +313,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
     },
     {
       id: 'draw',
-      title: '描くページの使い方',
+      title: 'PIX（描くページ）の使い方',
       items: [
         {
           q: '道具',
@@ -304,8 +323,11 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '| 消しゴム | マスを消して背景色に戻します。 |',
             '| 塗りつぶし | つながった同じ色の範囲を塗ります。 |',
             '| スポイト | キャンバスの色を拾って、ペンに戻ります。 |',
-            '| 戻す | 1つ前に戻ります（50回まで）。 |',
-            '| 全消し | キャンバスを全部消します（戻せます）。 |',
+            '| 選択 | 四角くドラッグして選びます。中をドラッグすると動かせます。⌘C / ⌘X / ⌘V でコピー・切り取り・貼り付け。 |',
+            '| スタンプ | ドット絵のスタンプを押します（下の「スタンプ」）。 |',
+            '| 戻す / やり直す | 1つ前に戻る・戻したものをやり直す（50回まで）。 |',
+            '| 画像 | PNG・JPEG・SVG をドット絵にします（キャンバスへのドロップ・貼り付けでも）。 |',
+            '| 全消し | キャンバスを全部消します。どかーん（戻せます）。 |',
           ],
         },
         {
@@ -319,12 +341,28 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
         },
         {
           q: 'グリッドサイズ',
-          a: ['8×8〜128×128。サイズを変えるとキャンバスは消えます（先に確認が出ます）。'],
+          a: [
+            '- 8・16・32・48・64・96・128 マス。サイズを変えるとキャンバスは消えます（先に確認が出ます）。',
+            '- ODD を押すと1マス足して（9×9〜129×129）、ちょうど真ん中のマスができます。真ん中はうっすらした十字で示します。切り替えても絵は残ります。',
+            '- 細かいイラストは 96×96 がちょうどよいことが多いです。',
+          ],
+        },
+        {
+          q: 'スタンプ',
+          a: [
+            '- 「スタンプ」（T）を選び、12種類のオリジナルのドット絵から1つ選んで、キャンバスをクリックします。押す位置に薄く下見が出ます。',
+            '- R で 90° 回す、F で左右反転、1× / 2× で大きさを変えます。',
+            '- スタンプの一部は今の色に染まります。輪郭や細かい部分は、もとの色のままです。',
+          ],
+        },
+        {
+          q: '音',
+          a: ['スタンプ・塗りつぶし・戻す・やり直す・全消しで小さな音が鳴ります。左の列の一番下にある「音」のボタンでオン・オフでき、このブラウザに覚えておきます。'],
         },
         {
           q: 'PNG を保存',
           a: [
-            '左の列の一番下のボタンで、約2048pxに拡大した PNG を保存します。ドットはぼけません。X などにそのまま投稿できます。ただの画像の保存で、mint はされません。',
+            '左の列の一番下のボタン（または S キー）で、約2048pxに拡大した PNG を保存します。ドットはぼけません。X などにそのまま投稿できます。ただの画像の保存で、mint はされません。',
           ],
         },
         {
