@@ -5,7 +5,7 @@ import { formatEther } from 'viem';
 import { LABEL, PIX_CHAINS } from '../../lib/chains';
 import { Name } from '../../components/Name';
 import { useI18n } from '../../lib/i18n';
-import { readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
+import { readNum, readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
 
 const PAGE = 24;
 /** OpenSea のコレクション。/assets/<chain>/<contract> はコレクションのページへ転送される（slug を変えてもリンクが切れない） */
@@ -24,6 +24,10 @@ export default function Gallery() {
   const [works, setWorks] = useState<Record<number, WorkView[]>>({}); // チェーンごとに読んだ分（新しい順）
   const [pages, setPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [feeBps, setFeeBps] = useState<bigint | null>(null);
+  useEffect(() => {
+    if (PIX_CHAINS[0]) readNum(PIX_CHAINS[0].chain.id, 'feeBps').then(setFeeBps).catch(() => {});
+  }, []);
 
   useEffect(() => {
     try {
@@ -88,27 +92,76 @@ export default function Gallery() {
   const more = on.some((id) => Number(totals[id] ?? 0) > (works[id]?.length ?? 0));
 
   const collections = PIX_CHAINS.filter((p) => OPENSEA[p.chain.id]);
+  // 見出しの数字（表示しているチェーンの、読んだ分から。まだ全部読んでいなければ「+」を付ける）
+  const stats = useMemo(() => {
+    const listed = list.filter((w) => w.price > 0n);
+    return {
+      artists: new Set(list.map((w) => w.creator.toLowerCase())).size,
+      owners: new Set(list.map((w) => w.owner.toLowerCase())).size,
+      listed: listed.length,
+      floor: listed.length ? listed.reduce((m, w) => (w.price < m ? w.price : m), listed[0].price) : null,
+    };
+  }, [list]);
 
   return (
     <div className="stack" style={{ gap: 20 }}>
-      <div className="works-banner">
-        <img src="/banner.jpg" alt="pixmint.mederu.art — full onchain" width={1376} height={459} />
-        {collections.length > 0 && (
-          <div className="banner-links">
-            {collections.map((p) => (
-              <a
-                key={p.chain.id}
-                className="tool"
-                href={`https://opensea.io/assets/${OPENSEA[p.chain.id]}/${p.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t('gallery.opensea', { chain: LABEL[p.chain.id] })} ↗
-              </a>
-            ))}
+      <section className="coll" aria-label="pixmint">
+        <div className="coll-bg" aria-hidden>
+          <img src="/banner.jpg" alt="" width={1376} height={459} />
+        </div>
+        <div className="coll-body">
+          <div className="coll-id">
+            <img className="coll-avatar" src="/avatar.jpg" alt="" width={256} height={256} />
+            <div className="stack" style={{ gap: 8, minWidth: 0 }}>
+              <h1 className="coll-name">pixmint</h1>
+              <div className="coll-chips">
+                {PIX_CHAINS.map((p) => (
+                  <span key={p.chain.id}>{LABEL[p.chain.id]}</span>
+                ))}
+                <span>{t('gallery.since')}</span>
+                {feeBps != null && <span>{t('gallery.fee', { pct: Number(feeBps) / 100 })}</span>}
+              </div>
+            </div>
+            {collections.length > 0 && (
+              <div className="coll-links">
+                {collections.map((p) => (
+                  <a
+                    key={p.chain.id}
+                    className="tool"
+                    href={`https://opensea.io/assets/${OPENSEA[p.chain.id]}/${p.address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('gallery.opensea', { chain: LABEL[p.chain.id] })} ↗
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+          <dl className="coll-stats">
+            <div>
+              <dt>{t('gallery.statWorks')}</dt>
+              <dd>{loaded ? count : '—'}</dd>
+            </div>
+            <div>
+              <dt>{t('gallery.statArtists')}</dt>
+              <dd>{stats.artists}{more && '+'}</dd>
+            </div>
+            <div>
+              <dt>{t('gallery.statOwners')}</dt>
+              <dd>{stats.owners}{more && '+'}</dd>
+            </div>
+            <div>
+              <dt>{t('gallery.statListed')}</dt>
+              <dd>{stats.listed}{more && '+'}</dd>
+            </div>
+            <div>
+              <dt>{t('gallery.statFloor')}</dt>
+              <dd>{stats.floor != null ? `${formatEther(stats.floor)} ETH` : '—'}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="chips" role="group" aria-label={t('gallery.chains')}>
           {PIX_CHAINS.map((p) => {
