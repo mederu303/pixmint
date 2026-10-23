@@ -15,7 +15,7 @@ mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`�
 | ABI + bytecode（アプリとデプロイ用・コミットする） | `lib/PixMint.json` | `npm test` で再生成 |
 | **アプリ（Next 15 + wagmi 2 + viem 2）** | `app/` `components/` `lib/` | ✅ 試作 |
 | └ 描く → mint | `app/page.tsx` `components/Editor.tsx` `components/MintPanel.tsx` | 左に道具（B/E/G/I・⌘Z）・パレット7種×30色（neon・earth・gameboy・kawaii・kidcore・holo・vaporwave。色を変えると選んだ枠も変わる・変えたパレットだけブラウザに保存・↺で戻す）・8〜128 |
-| └ 作品一覧 | `app/gallery/page.tsx` | totalMinted から新しい順に直接読む（getLogs は公開 RPC の範囲制限があるので使わない） |
+| └ 作品一覧 | `app/gallery/page.tsx` | 全チェーンをまとめて mint の新しい順。チェーンごとにオン／オフ（このブラウザに覚える）。totalMinted から直接読む（getLogs は公開 RPC の範囲制限があるので使わない） |
 | └ 作品ページ（出品・購入・内訳） | `app/[chainId]/[id]/page.tsx` | URL はコントラクトの external_url と同じ形 |
 | └ 名前表示（**pixmint 表示名 → .eth → Basename** → 短縮アドレス） | `lib/names.ts` `components/Name.tsx` | ✅ 2026-10-23 実チェーンで確認: vitalik.eth・jesse.base.eth・base.base.eth（Base 側だけの primary name は L2Resolver で逆引き＋正引きで照合） |
 | └ 表示名の設定 | `app/me/page.tsx`（右上メニュー →「表示名を設定」） | ✅ チェーンごとに保存。tokenURI に Artist 属性で出る |

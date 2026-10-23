@@ -86,6 +86,8 @@ const en = {
   'gallery.count': '{n} works',
   'gallery.empty': 'No works yet.',
   'gallery.more': 'Load more',
+  'gallery.chains': 'Chains to show',
+  'gallery.toggle': 'Show / hide works on this chain',
 
   'work.by': 'by',
   'work.loading': 'Loading…',
@@ -211,6 +213,8 @@ const ja: Record<Key, string> = {
   'gallery.count': '{n} 点',
   'gallery.empty': 'まだ作品がありません。',
   'gallery.more': 'もっと見る',
+  'gallery.chains': '表示するチェーン',
+  'gallery.toggle': 'このチェーンの作品を表示する／隠す',
 
   'work.by': 'by',
   'work.loading': '読み込み中…',

@@ -258,3 +258,6 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 
 /* テストネットだけのときの帯 */
 .testnet-banner { background: #2a2208; color: #ffb020; border-bottom: 1px solid #5a4510; font-size: 11px; letter-spacing: 0.04em; text-align: center; padding: 6px 16px; }
+
+/* 一覧のカードのチェーン名 */
+.chain-tag { margin-left: auto; font-size: 10px; color: var(--dim); border: 1px solid var(--line-hi); padding: 0 5px; letter-spacing: 0.04em; }
