@@ -94,7 +94,10 @@ npm run dev              # http://localhost:3333
 3. ブラウザで Basename / ENS の名前が出るか確認（vitalik.eth のアドレスで作品を作るなど）
 4. WalletConnect をスマホで試す（Reown の許可ドメイン）
 5. `DESIGN.md` §7 の残りの決めごと（二重 mint・ロイヤリティのプリセット)
-6. 未テスト: 受け取りを拒むコントラクト宛ての送金 → `pending` / `claim()` の経路。Foundry で足す
+6. ~~未テスト: 受け取りを拒むコントラクト宛ての送金 → `pending` / `claim()` の経路~~ → ✅ 2026-10-23 `test/run.mjs` に追加（Foundry は使わず今の仕組みで）:
+   作者が ETH を拒む → 二次販売は通り、ロイヤリティは pending → claim は受け取れるまで revert・受け取れたら全額・2回目は 0 /
+   売り手が gas を使い切る → buy は通り代金は pending（**ただし買い手がその gas を払う**。メインネットでは tx 上限 1,677万まで。ウォレットの見積もりで異常に高く見える）/
+   残高 = platformBalance + pending / withdraw は預かりに触れない
 
 ## 決定済み（2026-10-23）
 - mint は無料（ガス代だけ）。mederu の収益は pixmint 内の販売手数料 2.5%（上限 5% をコントラクトに固定）

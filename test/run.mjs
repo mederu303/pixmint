@@ -278,6 +278,66 @@ check('carol cannot acceptOwnership', !(await tx('acceptOwnership', [], { from: 
 check('bob acceptOwnership → owner = bob', (await tx('acceptOwnership', [], { from: bob })).ok && (await ownerIs(bob)));
 check('alice is no longer owner', !(await tx('setMintOpen', [false])).ok && (await tx('setMintOpen', [true], { from: bob })).ok);
 
+// ── 受け取りを拒むアドレス宛ての送金 → pending に預かる → claim() で引き出す ──
+// コードを持つアドレスを作って ETH を拒ませる（REVERT）／gas を使い切らせる（無限ループ）
+const REJECT = hexToBytes('0x60006000fd'); // PUSH1 0 PUSH1 0 REVERT
+const BURN = hexToBytes('0x5b600056'); // JUMPDEST PUSH1 0 JUMP（gas を使い切る）
+const dave = Address.fromString('0x' + 'da'.repeat(20)); // 作者（受け取りを拒む）
+const erin = Address.fromString('0x' + 'e0'.repeat(20)); // 持ち主（gas を使い切る）
+for (const a of [dave, erin]) await vm.stateManager.putAccount(a, new Account(0n, 10n ** 24n));
+const setCode = (a, code) => vm.stateManager.putContractCode(a, code);
+const contractBal = async () => bal(pix);
+const pendingOf = async (a) => (await view('pending', [a.toString()])).v;
+const platform = async () => (await view('platformBalance', [])).v;
+{
+  // dave が作者 7.5% で mint → bob に譲渡
+  const { r } = await mint(encodePxm(blobArt(16, 4)), 'reject test', 750, dave);
+  check('dave mints (royalty 7.5%)', !r.execResult.exceptionError);
+  const D = (await view('totalMinted', [])).v;
+  await tx('transferFrom', [dave.toString(), bob.toString(), D], { from: dave });
+  await setCode(dave, REJECT); // ここから dave は ETH を受け取れない
+
+  // 二次販売: bob が 1 ETH で出品 → carol が買う。作者への 7.5% は送れないので pending に預かる
+  const fee = BigInt((await view('feeBps', [])).v); // 前のテストで 5% に上げている
+  const p0 = await platform();
+  const b0 = await bal(bob);
+  await tx('list', [D, E], { from: bob });
+  const S = await tx('buy', [D], { from: carol, value: E });
+  check(`buy succeeds even if the creator rejects ETH (gas ${S.gas.toLocaleString()})`, S.ok);
+  check('creator royalty 7.5% held in pending', (await pendingOf(dave)) === (E * 75n) / 1000n);
+  check(`seller bob gets 100% - fee ${Number(fee) / 100}% - royalty 7.5%`, (await bal(bob)) - b0 === (E * (10000n - fee - 750n)) / 10000n);
+  check(`fee ${Number(fee) / 100}% to platformBalance`, (await platform()) - p0 === (E * fee) / 10000n);
+  check('owner of the work is carol', ((await view('ownerOf', [D])).v).toLowerCase() === carol.toString());
+
+  // まだ受け取れないうちの claim は revert し、預かりは減らない
+  check('claim reverts while dave still rejects ETH', !(await tx('claim', [], { from: dave })).ok);
+  check('pending unchanged after failed claim', (await pendingOf(dave)) === (E * 75n) / 1000n);
+  // 受け取れるようになったら（例: ウォレットを直した）claim で全額
+  await setCode(dave, new Uint8Array());
+  const d0 = await bal(dave);
+  check('claim after dave can receive', (await tx('claim', [], { from: dave })).ok);
+  check('dave receives 0.075 ETH (minus nothing: gas is not charged in runCall)', (await bal(dave)) - d0 === (E * 75n) / 1000n);
+  check('pending cleared', (await pendingOf(dave)) === 0n);
+  const d1 = await bal(dave);
+  check('second claim pays nothing', (await tx('claim', [], { from: dave })).ok && (await bal(dave)) === d1);
+
+  // 売り手が gas を使い切るコントラクトでも、buy は通り（63/64 ルールで残った gas で pending に書く）、代金は預かりになる
+  await tx('transferFrom', [carol.toString(), erin.toString(), D], { from: carol });
+  await tx('list', [D, 2n * E], { from: erin });
+  await setCode(erin, BURN);
+  const G = await tx('buy', [D], { from: alice, value: 2n * E });
+  check(`buy succeeds when the seller burns all gas (gas ${G.gas.toLocaleString()} — the buyer pays for it)`, G.ok);
+  check('seller proceeds held in pending', (await pendingOf(erin)) === (2n * E * (10000n - fee - 750n)) / 10000n);
+  check('royalty to dave paid directly now', (await pendingOf(dave)) === 0n);
+
+  // 会計: コントラクトの残高 = mederu の取り分 + 預かり
+  const sum = (await platform()) + (await pendingOf(erin)) + (await pendingOf(dave));
+  check('contract balance == platformBalance + pending', (await contractBal()) === sum);
+  // owner の withdraw は預かりに手を付けない
+  const ownerNow = (await view('owner', [])).v.toLowerCase() === bob.toString() ? bob : alice;
+  check('withdraw only takes platformBalance', (await tx('withdraw', [mederu.toString()], { from: ownerNow })).ok && (await contractBal()) === (await pendingOf(erin)));
+}
+
 // ── 上限ぎりぎりの作品でも tokenURI がトランザクションの gas 上限（EIP-7825: 16,777,216）に収まること ──
 // 最悪の形: 129×129・255色・ちょうど MAX_RUNS ラン（色ごとにパスが分かれ、SVG がいちばん長くなる）
 const TX_GAS_CAP = 16_777_216;
