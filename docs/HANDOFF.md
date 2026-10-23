@@ -68,8 +68,15 @@ npm run dev              # http://localhost:3333
 
 ## 本番サイト（2026-10-23）
 - **https://pixmint.mederu.art** = Vercel `mederu303-9891s-projects/pixmint` の production。DNS はお名前.com（01-04.dnsv.jp）に `A pixmint 76.76.21.21`
-- production の環境変数はまだ空（コントラクト無し＝「チェーンなし」の画面）。メインネットに置いたら `NEXT_PUBLIC_PIXMINT_1` / `_8453` を production に入れて `vercel deploy --prod`
-- テストネット用のアドレスは preview だけに入れている（本番に混ぜない）
+- **2026-10-23 から本番もテストネット（Sepolia / Base Sepolia v3）で公開中**。上に「TESTNET」の帯が出る（全チェーンがテストネットのとき自動）
+- メインネットに切り替えるとき: production の `NEXT_PUBLIC_PIXMINT_11155111` / `_84532` を消し、`_1` / `_8453` を入れて `vercel deploy --prod`（帯は自動で消える）
+- v3 のソースは Sourcify で公開済み（exact match・両チェーン）: `node scripts/verify-sourcify.mjs <chainId> <address> <deploy tx>`。メインネットでも同じく
+
+### メインネットの決めごと（2026-10-23 確認）
+- チェーン: **Ethereum と Base の両方**
+- owner: **デプロイ用と同じ `0xC9DE…0C08`**（鍵は `.env.deploy` の平文。Ownable2Step なので、あとでハードウェアウォレット / Safe に `transferOwnership` → `acceptOwnership` で移せる）
+- デプロイ用アドレスの残高（2026-10-23）: Ethereum 0 / Base ほぼ 0。費用の目安は Ethereum 約 0.0006 ETH・Base 約 0.00006 ETH（ガス価格で変わる）
+- 置く前に: 残高を入れる → `node scripts/check-deploy.mjs` → `ALLOW_MAINNET=1 npm run deploy -- base`（と `mainnet`）→ Sourcify で公開 → production の環境変数を差し替え
 
 ## アイデア（2026-10-23・順番に少しずつ）
 1. ガス代表示 — ✅ 2026-10-23（`lib/cost.ts`）: ガス価格 12 秒ごと・「gas × gwei」・ランの使用率・
