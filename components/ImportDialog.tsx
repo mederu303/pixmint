@@ -25,7 +25,7 @@ export function ImportDialog({
   const [colors, setColors] = useState(16);
   const [dither, setDither] = useState(false);
   const [usePalette, setUsePalette] = useState(false);
-  const [keep, setKeep] = useState<'colors' | 'detail'>('colors');
+  const [keep, setKeep] = useState<'balanced' | 'colors' | 'detail'>('balanced');
   const ref = useRef<HTMLCanvasElement>(null);
 
   // ドット絵の拡大画像なら元のマス目を読む（にじまない）。写真などはなめらかに縮める
@@ -115,6 +115,9 @@ export function ImportDialog({
         <div className="stack" style={{ gap: 4 }}>
           <span className="note">{t('import.keepLabel')}</span>
           <div className="chips">
+            <button className={`tool ${keep === 'balanced' ? 'on' : ''}`} onClick={() => setKeep('balanced')} aria-pressed={keep === 'balanced'} title={t('import.keepBalancedHint')}>
+              {t('import.keepBalanced')}
+            </button>
             <button className={`tool ${keep === 'colors' ? 'on' : ''}`} onClick={() => setKeep('colors')} aria-pressed={keep === 'colors'} title={t('import.keepColorsHint')}>
               {t('import.keepColors')}
             </button>
@@ -123,8 +126,9 @@ export function ImportDialog({
             </button>
           </div>
         </div>
-        {result.simplified && !tooMany && <p className="note warn">{t('import.simplified', { n: result.colors })}</p>}
-        {result.reduced && !tooMany && <p className="note warn">{t('import.reduced', { n: result.colors })}</p>}
+        {result.balanced && !tooMany && <p className="note warn">{t('import.balanced', { n: result.colors })}</p>}
+        {!result.balanced && result.simplified && !tooMany && <p className="note warn">{t('import.simplified', { n: result.colors })}</p>}
+        {!result.balanced && result.reduced && !tooMany && <p className="note warn">{t('import.reduced', { n: result.colors })}</p>}
         {tooMany && <p className="note bad">{t('mint.tooDetailed')}</p>}
         <p className="note">{t('import.note', { size })}</p>
         <div className="chips">

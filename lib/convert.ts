@@ -15,8 +15,12 @@ export interface ConvertOptions {
   colors: number; // 目標の色数（2〜64）
   dither: boolean;
   palette?: string[]; // 指定すればこの色だけを使う
-  /** 上限を超えたときに何を残すか。'colors' = 色数を残して小さな点をまとめる（既定）/ 'detail' = 点を残して色数を下げる */
-  keep?: 'colors' | 'detail';
+  /**
+   * 上限を超えたときに何を残すか。
+   * 'balanced' = 色数をいくつか試し、元の画像にいちばん近く見えるものを選ぶ（既定）
+   * 'colors' = 色数を残して小さな点をまとめる / 'detail' = 点を残して色数を下げる
+   */
+  keep?: 'balanced' | 'colors' | 'detail';
 }
 
 export interface ConvertResult {
@@ -25,6 +29,7 @@ export interface ConvertResult {
   runs: number;
   reduced: boolean; // 上限に収めるために色数を下げた
   simplified: boolean; // 上限に収めるために小さな点をまとめた
+  balanced?: boolean; // 'balanced' で色数を選んだ
 }
 
 const hex = ([r, g, b]: RGB) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
@@ -211,7 +216,55 @@ function quantize(rgba: Uint8ClampedArray, size: number, pal: RGB[], dither: boo
 }
 
 /** 画像（size×size の RGBA）をドット絵に。上限に収まるまで色数を下げる */
+/** 元の画像との見た目の差（色の差の合計。透明かどうかが違うマスは大きく数える）。小さいほど元に近い */
+function difference(rgba: Uint8ClampedArray, size: number, grid: PixGrid): number {
+  let e = 0;
+  const MISS = 3 * 255 * 255 * 3;
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++) {
+      const i = (r * size + c) * 4;
+      const solid = rgba[i + 3] >= 128;
+      const v = grid[r][c];
+      if (!solid) {
+        if (v) e += MISS;
+        continue;
+      }
+      if (!v) {
+        e += MISS;
+        continue;
+      }
+      e += dist([rgba[i], rgba[i + 1], rgba[i + 2]], parse(v));
+    }
+  return e;
+}
+
 export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: ConvertOptions): ConvertResult {
+  if ((opt.keep ?? 'balanced') === 'balanced') return convertBalanced(rgba, size, bg, opt);
+  return convertOnce(rgba, size, bg, opt);
+}
+
+/**
+ * 色数の候補（指定した色数から少しずつ減らす）をそれぞれ上限に収め、元の画像にいちばん近いものを選ぶ。
+ * 色が多いと点をまとめる量が増えて横に流れ、少ないと色が足りなくなる。その間のちょうどよい所を探す
+ */
+function convertBalanced(rgba: Uint8ClampedArray, size: number, bg: string, opt: ConvertOptions): ConvertResult {
+  const first = convertOnce(rgba, size, bg, { ...opt, keep: 'colors' });
+  if (!first.simplified && !first.reduced) return first; // そのままで収まる
+  const top = Math.max(2, Math.min(64, opt.colors));
+  const ns = [...new Set([top, 24, 20, 16, 14, 12, 10, 8, 7, 6, 5, 4, 3].filter((n) => n <= top && n >= 2))];
+  let best = first;
+  let bestErr = first.runs <= PXM_MAX_RUNS ? difference(rgba, size, first.grid) : Infinity;
+  for (const n of ns) {
+    if (n === top) continue;
+    const r = convertOnce(rgba, size, bg, { ...opt, colors: n, keep: 'colors' });
+    if (r.runs > PXM_MAX_RUNS) continue;
+    const e = difference(rgba, size, r.grid);
+    if (e < bestErr) [best, bestErr] = [r, e];
+  }
+  return { ...best, balanced: true };
+}
+
+function convertOnce(rgba: Uint8ClampedArray, size: number, bg: string, opt: ConvertOptions): ConvertResult {
   const opaque: RGB[] = [];
   for (let i = 0; i < size * size; i++) if (rgba[i * 4 + 3] >= 128) opaque.push([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]]);
   const fixed = opt.palette?.map(parse);
@@ -249,7 +302,7 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
       return { grid, colors: info.colors, runs: info.runs, reduced, simplified: false };
     } catch {
       // 色数を優先: 小さな点をまとめて収める（最初の色数のときだけ。収まらなければ色数を下げる）
-      if ((opt.keep ?? 'colors') === 'colors' && !reduced) {
+      if (opt.keep !== 'detail' && !reduced) {
         const fit = simplifyToFit(grid, bg, PXM_MAX_RUNS);
         if (fit) {
           const info = validatePxm(encodePxm(fit.map((row) => row.map((c) => c ?? bg)), bg));
@@ -259,7 +312,7 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
       // ラン 2,048 超え。ディザは細かくなりやすいので、まず色数を下げる
       if (n <= 2) {
         // 2 色でも収まらない（細かいディザなど）→ ディザを切ってもう一度
-        if (opt.dither) return { ...convert(rgba, size, bg, { ...opt, dither: false }), reduced: true };
+        if (opt.dither) return { ...convertOnce(rgba, size, bg, { ...opt, dither: false }), reduced: true };
         const grid2 = quantize(rgba, size, pal, false);
         return { grid: grid2, colors: pal.length, runs: PXM_MAX_RUNS + 1, reduced: true, simplified: false };
       }
