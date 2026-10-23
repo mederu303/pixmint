@@ -404,6 +404,6 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
 /* 広い画面: 数字はタイトル行の上寄せ、OpenSea・SNS はバナーの右下に固定（行を増やさない） */
 @media (min-width: 901px) {
   .coll-id { position: relative; padding-right: 0; }
-  .coll-id .coll-stats { align-self: flex-start; margin-top: 2px; }
+  .coll-id .coll-stats { align-self: flex-end; margin-bottom: 0; } /* 数字の下端をタグ・ボタンの下端にそろえる */
   .coll-right { position: absolute; right: 0; bottom: 0; margin: 0; }
 }
