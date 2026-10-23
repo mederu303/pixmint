@@ -182,6 +182,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           a: [
             'Drop an image onto the canvas, paste one with ⌘V, or use the Image button. It is fitted to the current grid size.',
             'Choose the number of colors, dithering, or "use current palette", then Place. It floats so you can move it before pressing Enter.',
+            'Enlarged pixel art (such as a pixmint PNG) is detected and read cell by cell, so it stays sharp. The background color becomes transparent.',
             'If the result would be too detailed to render on-chain (over 4,096 runs), the colors are reduced automatically.',
           ],
         },
@@ -356,6 +357,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           a: [
             'キャンバスに画像をドロップするか、⌘V で貼り付けるか、「画像」ボタンで選びます。今のグリッドのサイズに合わせます。',
             '色数・ディザ・「今のパレットに寄せる」を選んで「置く」を押します。浮いた状態で置かれるので、動かしてから Enter で確定します。',
+            '拡大したドット絵（pixmint の PNG など）は自動で見分けて、1マスずつ読み取るのでにじみません。背景と同じ色は透明にします。',
             '細かすぎてチェーン上で描けない（ラン 4,096 超え）ときは、自動で色数を減らします。',
           ],
         },

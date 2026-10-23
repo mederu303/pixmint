@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { convert, sample } from '../lib/convert';
+import { convert, detectPixelArt, dropBackground, placePixels, sample } from '../lib/convert';
 import { useI18n } from '../lib/i18n';
 import type { PixGrid } from '../lib/pix';
 import { PXM_MAX_RUNS } from '../src/pxm';
@@ -27,7 +27,14 @@ export function ImportDialog({
   const [usePalette, setUsePalette] = useState(false);
   const ref = useRef<HTMLCanvasElement>(null);
 
-  const rgba = useMemo(() => sample(image, size), [image, size]);
+  // ドット絵の拡大画像なら元のマス目を読む（にじまない）。写真などはなめらかに縮める
+  const art = useMemo(() => detectPixelArt(image), [image]);
+  const [asPixels, setAsPixels] = useState(true);
+  const [dropBg, setDropBg] = useState(true);
+  const rgba = useMemo(() => {
+    const raw = art && asPixels ? placePixels(art, size) : sample(image, size);
+    return dropBg ? dropBackground(raw, bg) : raw;
+  }, [art, asPixels, image, size, dropBg, bg]);
   const result = useMemo(
     () => convert(rgba, size, bg, { colors, dither, palette: usePalette ? palette : undefined }),
     [rgba, size, bg, colors, dither, usePalette, palette],
@@ -82,7 +89,21 @@ export function ImportDialog({
           </span>
           <input type="range" min={2} max={32} value={colors} onChange={(e) => setColors(Number(e.target.value))} />
         </label>
+        {art && (
+          <p className="note ok">
+            {t('import.detected', { w: art.w, h: art.h })}
+            {(art.w > size || art.h > size) && ' ' + t('import.shrunk', { size })}
+          </p>
+        )}
         <div className="chips">
+          {art && (
+            <button className={`tool ${asPixels ? 'on' : ''}`} onClick={() => setAsPixels((v) => !v)} aria-pressed={asPixels}>
+              {t('import.asPixels')}
+            </button>
+          )}
+          <button className={`tool ${dropBg ? 'on' : ''}`} onClick={() => setDropBg((v) => !v)} aria-pressed={dropBg} title={t('import.dropBgHint')}>
+            {t('import.dropBg')}
+          </button>
           <button className={`tool ${dither ? 'on' : ''}`} onClick={() => setDither((d) => !d)} aria-pressed={dither}>
             {t('import.dither')}
           </button>

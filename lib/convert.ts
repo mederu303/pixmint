@@ -30,6 +30,96 @@ const dist = (a: RGB, b: RGB) => {
   return 2 * dr * dr + 4 * dg * dg + 3 * db * db;
 };
 
+/**
+ * ドット絵の拡大画像か調べて、元のマス目を読み取る（pixmint の PNG 書き出しや、他のツールで拡大したドット絵）。
+ * 色が変わる位置の間隔の最大公約数をマスの大きさとみなし、各マスの真ん中の色を拾う。
+ * JPEG のにじみに負けないよう、色の差が小さい変化は無視する。見つからなければ null
+ */
+export function detectPixelArt(img: CanvasImageSource & { width: number; height: number }): { w: number; h: number; rgba: Uint8ClampedArray } | null {
+  const W = img.width, H = img.height;
+  if (W < 16 || H < 16 || W * H > 4096 * 4096) return null;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  const px = (x: number, y: number) => (y * W + x) * 4;
+  // はっきりした色の変わり目だけ拾う（JPEG のにじみの小さな変化は無視）
+  const differ = (a: number, b: number) =>
+    Math.abs(d[a] - d[b]) + Math.abs(d[a + 1] - d[b + 1]) + Math.abs(d[a + 2] - d[b + 2]) + Math.abs(d[a + 3] - d[b + 3]) > 96;
+  // 何本かの行・列で、色の変わり目の位置を集める（にじみで続けて出る変わり目は最初の1つだけ）
+  const xs: number[] = [], ys: number[] = [];
+  const scan = (len: number, lines: number, at: (line: number, i: number) => number, out: number[]) => {
+    for (let k = 1; k <= 24; k++) {
+      const line = Math.floor((lines * k) / 25);
+      let prev = -9;
+      for (let i = 1; i < len; i++)
+        if (differ(at(line, i), at(line, i - 1))) {
+          if (i - prev > 2) out.push(i);
+          prev = i;
+        }
+    }
+  };
+  scan(W, H, (y, x) => px(x, y), xs);
+  scan(H, W, (x, y) => px(x, y), ys);
+  if (xs.length + ys.length < 8) return null;
+  // マスの数 n を少ない方から試し、変わり目のほとんど（90%）がマスの境目（±許容）に乗る最初の n を選ぶ
+  const fits = (pos: number[], cell: number) => {
+    const tol = Math.max(1.5, cell * 0.12);
+    let ok = 0;
+    for (const p of pos) {
+      const m = p % cell;
+      if (m <= tol || cell - m <= tol) ok++;
+    }
+    return ok >= pos.length * 0.9;
+  };
+  let w = 0, h = 0;
+  for (let n = 2; n <= 129; n++) {
+    const cell = W / n;
+    if (cell < 6) break; // マスが小さすぎると何でも当てはまってしまう（写真をドット絵と間違える）
+    const hn = Math.round(H / cell);
+    if (hn < 1 || hn > 129 || Math.abs(H / cell - hn) > 0.15) continue;
+    if (fits(xs, cell) && fits(ys, H / hn)) {
+      w = n;
+      h = hn;
+      break;
+    }
+  }
+  if (!w) return null;
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) {
+      const x = Math.min(W - 1, Math.floor((c + 0.5) * (W / w))), y = Math.min(H - 1, Math.floor((r + 0.5) * (H / h)));
+      rgba.set(d.subarray(px(x, y), px(x, y) + 4), (r * w + c) * 4);
+    }
+  return { w, h, rgba };
+}
+
+/** 読み取ったドット絵を size×size に。小さければ拡大せず真ん中に置く・大きければ最近傍で縮める（色を混ぜない） */
+export function placePixels(art: { w: number; h: number; rgba: Uint8ClampedArray }, size: number): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(size * size * 4);
+  const s = Math.min(1, size / art.w, size / art.h);
+  const w = Math.max(1, Math.round(art.w * s)), h = Math.max(1, Math.round(art.h * s));
+  const ox = Math.floor((size - w) / 2), oy = Math.floor((size - h) / 2);
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) {
+      const sr = Math.min(art.h - 1, Math.floor(r / s)), sc = Math.min(art.w - 1, Math.floor(c / s));
+      out.set(art.rgba.subarray((sr * art.w + sc) * 4, (sr * art.w + sc) * 4 + 4), ((oy + r) * size + ox + c) * 4);
+    }
+  return out;
+}
+
+/** 背景と同じ色（ほぼ同じも含む）のマスを透明にする。書き出した PNG の背景を拾わないように */
+export function dropBackground(rgba: Uint8ClampedArray, bg: string): Uint8ClampedArray {
+  const [br, bgG, bb] = parse(bg);
+  const out = rgba.slice();
+  for (let i = 0; i < out.length; i += 4)
+    if (Math.abs(out[i] - br) + Math.abs(out[i + 1] - bgG) + Math.abs(out[i + 2] - bb) <= 24) out[i + 3] = 0;
+  return out;
+}
+
 /** 画像を size×size の RGBA に（縦横比を保って中央に置く） */
 export function sample(img: CanvasImageSource & { width: number; height: number }, size: number): Uint8ClampedArray {
   const cv = document.createElement('canvas');
@@ -121,6 +211,18 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
   for (let i = 0; i < size * size; i++) if (rgba[i * 4 + 3] >= 128) opaque.push([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]]);
   const fixed = opt.palette?.map(parse);
   let n = Math.max(2, Math.min(64, opt.colors));
+  // 元の色数が目標以下なら（ドット絵など）、色を作り直さずそのまま使う
+  if (!fixed) {
+    const uniq = new Map<string, RGB>();
+    for (const p of opaque) uniq.set(hex(p), p);
+    if (uniq.size <= n) {
+      const grid = quantize(rgba, size, [...uniq.values()], false);
+      try {
+        const info = validatePxm(encodePxm(grid.map((row) => row.map((c) => c ?? bg)), bg));
+        return { grid, colors: info.colors, runs: info.runs, reduced: false };
+      } catch {}
+    }
+  }
   let reduced = false;
   for (;;) {
     let pal: RGB[];
