@@ -16,6 +16,8 @@ const EXPLORER: Record<number, string> = {
   11155111: 'https://sepolia.etherscan.io',
   84532: 'https://sepolia.basescan.org',
 };
+/** OpenSea のチェーン名（テストネットは OpenSea が対応をやめたので無し） */
+const OPENSEA: Record<number, string> = { 1: 'ethereum', 8453: 'base' };
 
 export default function WorkPage() {
   const { t, lang } = useI18n();
@@ -147,6 +149,18 @@ export default function WorkPage() {
             <span className="note">{t('work.notForSale')}</span>
           )}
           {tx.error && <p className="note bad">{tx.error}</p>}
+        </div>
+        <div className="chips work-links">
+          {OPENSEA[chainId] && (
+            <a className="tool" href={`https://opensea.io/item/${OPENSEA[chainId]}/${pixChain(chainId)!.address}/${w.id}`} target="_blank" rel="noopener noreferrer">
+              OpenSea ↗
+            </a>
+          )}
+          {ex && (
+            <a className="tool" href={`${ex}/nft/${pixChain(chainId)!.address}/${w.id}`} target="_blank" rel="noopener noreferrer">
+              {ex.replace('https://', '')} ↗
+            </a>
+          )}
         </div>
         <p className="note">
           {t('work.note')}

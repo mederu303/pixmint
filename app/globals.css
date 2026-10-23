@@ -261,3 +261,6 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 
 /* 一覧のカードのチェーン名 */
 .chain-tag { margin-left: auto; font-size: 10px; color: var(--dim); border: 1px solid var(--line-hi); padding: 0 5px; letter-spacing: 0.04em; }
+
+/* 作品ページの外部リンク（OpenSea・Etherscan / Basescan） */
+.work-links a.tool { text-decoration: none; display: inline-block; }
