@@ -17,7 +17,7 @@ mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`�
 | └ 描く → mint | `app/page.tsx` `components/Editor.tsx` `components/MintPanel.tsx` | 左に道具（B/E/G/I・⌘Z）・パレット7種×30色（neon・earth・gameboy・kawaii・kidcore・holo・vaporwave。色を変えると選んだ枠も変わる・変えたパレットだけブラウザに保存・↺で戻す）・8〜128 |
 | └ 作品一覧 | `app/gallery/page.tsx` | totalMinted から新しい順に直接読む（getLogs は公開 RPC の範囲制限があるので使わない） |
 | └ 作品ページ（出品・購入・内訳） | `app/[chainId]/[id]/page.tsx` | URL はコントラクトの external_url と同じ形 |
-| └ 名前表示（**pixmint 表示名 → .eth → Basename** → 短縮アドレス） | `lib/names.ts` `components/Name.tsx` | 表示名は ✅。⚠️ .eth / Basename は外に出られない環境で作ったので**未確認** |
+| └ 名前表示（**pixmint 表示名 → .eth → Basename** → 短縮アドレス） | `lib/names.ts` `components/Name.tsx` | ✅ 2026-10-23 実チェーンで確認: vitalik.eth・jesse.base.eth・base.base.eth（Base 側だけの primary name は L2Resolver で逆引き＋正引きで照合） |
 | └ 表示名の設定 | `app/me/page.tsx`（右上メニュー →「表示名を設定」） | ✅ チェーンごとに保存。tokenURI に Artist 属性で出る |
 | └ UI（英語が既定・右上で EN/JP。mederu 系のサイバー調・ロゴは Silkscreen） | `lib/i18n.tsx` `app/globals.css` `app/layout.tsx` | ✅ 文言は lib/i18n.tsx に集約 |
 | └ ヘルプ（FAQ） | `app/help/page.tsx` `lib/help.ts` | ✅ フルオンチェーンの説明・お金の流れ・mint の仕方・描き方・ショートカット（EN/JP）。**数値（手数料・上限）を変えたら lib/help.ts も直す** |
@@ -50,6 +50,17 @@ npm run dev              # http://localhost:3333
 `~/antigravity/mederux/packages/atelier/src/lib/pix/`（core / render / palettes / store / PixContext）。
 **読むだけ**。pixmint 側にはエディタの必要部分をコピーして持つ予定。
 エンコードの前に、exportSVG と同じ「キャンバスで合成 → 色を拾う」前処理を通すこと。
+
+## テストネット（2026-10-23）
+| | アドレス | deploy tx |
+|---|---|---|
+| Sepolia (11155111) | `0xc8c425587a818fbfff287b59991fcf471fa47dd8` | `0x7007b942…ab31` |
+| Base Sepolia (84532) | `0xc8c425587a818fbfff287b59991fcf471fa47dd8`（同じ deployer の nonce 0 なので同じアドレス） | `0x12cc4bc4…9544` |
+
+- owner / deployer: `0xC9DE84e5249C318D96DDBFF2f63ded08ED480C08`（鍵は `.env.deploy`。git に入らない）
+- デプロイ: `npm run deploy -- sepolia` / `base-sepolia`（メインネットは `ALLOW_MAINNET=1` が要る）。事前確認は `node scripts/check-deploy.mjs`
+- ガス代の実測は `DESIGN.md` §3（Sepolia は Glamsterdam 入りで mint 約 4.4 倍）
+- OpenSea はテストネット対応終了（2025-07）。Rarible testnet もインデックスされず。表示はメインネットで確認する
 
 ## 次（</> = Claude Code でやる）
 1. Foundry に載せ替えるか判断（今のテストで十分なら不要）

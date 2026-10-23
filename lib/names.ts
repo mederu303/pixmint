@@ -5,12 +5,38 @@
 //   4. 0x1234…abcd
 // アドレスは ETH でも Base でも同じ。表示名はチェーンごとに保存されるので、
 // 作品のチェーンを先に見て、無ければ他の設定済みチェーンも見る。
-import { createPublicClient, http, toCoinType, type PublicClient } from 'viem';
+import { createPublicClient, http, isAddressEqual, namehash, parseAbi, toCoinType, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
 import { PIX_CHAINS, pixChain } from './chains';
 import { PIXMINT_ABI, client } from './contract';
 
 let ens: PublicClient | null = null;
+let baseClient: PublicClient | null = null;
+
+// Basenames の L2Resolver（Base メインネット）。primary name は Base 側だけに設定されていることが多く、
+// メインネットの ENS 逆引きでは出てこない（2026-10-23 base.base.eth で確認）
+const BASENAMES_L2_RESOLVER = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD';
+const L2_RESOLVER_ABI = parseAbi([
+  'function name(bytes32 node) view returns (string)',
+  'function addr(bytes32 node) view returns (address)',
+]);
+
+async function basename(address: `0x${string}`): Promise<string | null> {
+  baseClient ??= createPublicClient({
+    chain: base,
+    transport: http(process.env.NEXT_PUBLIC_RPC_8453 || undefined, { timeout: 6000 }),
+  }) as PublicClient;
+  try {
+    const reverse = namehash(`${address.toLowerCase().slice(2)}.80002105.reverse`);
+    const name = await baseClient.readContract({ address: BASENAMES_L2_RESOLVER, abi: L2_RESOLVER_ABI, functionName: 'name', args: [reverse] });
+    if (!name) return null;
+    // 逆引きは誰でも好きな名前を書けるので、名前 → アドレスが一致するものだけ出す
+    const forward = await baseClient.readContract({ address: BASENAMES_L2_RESOLVER, abi: L2_RESOLVER_ABI, functionName: 'addr', args: [namehash(name)] });
+    return isAddressEqual(forward, address) ? name : null;
+  } catch {
+    return null;
+  }
+}
 const cache = new Map<string, Promise<string | null>>();
 
 async function pixName(address: `0x${string}`, preferChainId?: number): Promise<string | null> {
@@ -39,10 +65,10 @@ async function ensName(address: `0x${string}`): Promise<string | null> {
     if (n) return n;
   } catch {}
   try {
-    return await ens.getEnsName({ address, coinType: toCoinType(base.id) });
-  } catch {
-    return null; // RPC に届かない（ローカル開発など）ときは短縮アドレスのまま
-  }
+    const n = await ens.getEnsName({ address, coinType: toCoinType(base.id) });
+    if (n) return n;
+  } catch {}
+  return basename(address); // RPC に届かない（ローカル開発など）ときは null → 短縮アドレスのまま
 }
 
 export function lookupName(address: string, preferChainId?: number): Promise<string | null> {
