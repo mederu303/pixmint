@@ -66,9 +66,20 @@ npm run dev              # http://localhost:3333
 - ガス代の実測は `DESIGN.md` §3（Sepolia は Glamsterdam 入りで mint 約 4.4 倍）
 - OpenSea はテストネット対応終了（2025-07）。Rarible testnet もインデックスされず。表示はメインネットで確認する
 
+## メインネット（2026-10-23 デプロイ・v3・Sourcify exact match）
+| | アドレス | deploy tx | 費用 |
+|---|---|---|---|
+| **Ethereum (1)** | `0xc8c425587a818fbfff287b59991fcf471fa47dd8` | `0xf57b36680e4c5b58fa187cad7568309752073978f015f55a27b3f20c616adcfd` | 0.000904 ETH（0.23 gwei） |
+| **Base (8453)** | `0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8` | `0xc9d79defd18df20606e6379f8d498d7825fb293633d7a78c21edbf85a441f3d8` | 0.0000234 ETH |
+
+- owner `0xC9DE…0C08`（デプロイ用と同じ・鍵は `.env.deploy`）・手数料 2.5%・mint 無料・MAX_RUNS 2,048・siteURL `https://pixmint.mederu.art`
+- ⚠️ Ethereum のアドレスは v1 テストネット（`0xc8c4…7dd8`）と同じ文字列（同じ deployer の nonce 0）。チェーンが違う別物
+- **本番サイト = メインネット**（production の環境変数は `_1` / `_8453` だけ）。プレビュー = テストネット v3（`_11155111` / `_84532`）
+- RPC は viem の公開 RPC のまま。人が増えたら `NEXT_PUBLIC_RPC_1` / `_8453` に Alchemy などを入れる
+
 ## 本番サイト（2026-10-23）
 - **https://pixmint.mederu.art** = Vercel `mederu303-9891s-projects/pixmint` の production。DNS はお名前.com（01-04.dnsv.jp）に `A pixmint 76.76.21.21`
-- **2026-10-23 から本番もテストネット（Sepolia / Base Sepolia v3）で公開中**。上に「TESTNET」の帯が出る（全チェーンがテストネットのとき自動）
+- 2026-10-23 の一時期は本番もテストネットで公開していた（「TESTNET」の帯は全チェーンがテストネットのとき自動で出る）。今はメインネット
 - メインネットに切り替えるとき: production の `NEXT_PUBLIC_PIXMINT_11155111` / `_84532` を消し、`_1` / `_8453` を入れて `vercel deploy --prod`（帯は自動で消える）
 - v3 のソースは Sourcify で公開済み（exact match・両チェーン）: `node scripts/verify-sourcify.mjs <chainId> <address> <deploy tx>`。メインネットでも同じく
 
