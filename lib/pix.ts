@@ -63,6 +63,19 @@ export function flatten(grid: PixGrid, bg: string): PixGrid {
 }
 
 export const GRID_SIZES = [8, 16, 32, 48, 64, 128];
+/** ODD モード: 偶数のサイズ +1（9〜129）。ちょうど真ん中のマスができる。コントラクトの上限 129 に収まる */
+export const isOdd = (size: number) => size % 2 === 1;
+export const baseSize = (size: number) => (isOdd(size) ? size - 1 : size);
+export const ALL_SIZES = GRID_SIZES.flatMap((s) => [s, s + 1]);
+
+/** サイズを変えて絵を残す。増えた分は右と下に足し、減るときは右と下を削る（ODD の切り替えを往復しても戻る） */
+export function regrid(grid: PixGrid, size: number): PixGrid {
+  return Array.from({ length: size }, (_, r) => Array.from({ length: size }, (_, c) => grid[r]?.[c] ?? null));
+}
+
+/** regrid で消えるマス（右端の列・下端の行）に絵があるか */
+export const wouldCrop = (grid: PixGrid, size: number) =>
+  grid.some((row, r) => row.some((c, k) => c && (r >= size || k >= size)));
 
 /** 書き出しの目安サイズ。X は大きい画像でも 4096px まで受け付け、2048px あれば拡大表示でも粗くならない */
 export const EXPORT_TARGET = 2048;

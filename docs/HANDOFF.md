@@ -21,6 +21,7 @@ mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`�
 | └ 表示名の設定 | `app/me/page.tsx`（右上メニュー →「表示名を設定」） | ✅ チェーンごとに保存。tokenURI に Artist 属性で出る |
 | └ UI（英語が既定・右上で EN/JP。mederu 系のサイバー調・ロゴは Silkscreen） | `lib/i18n.tsx` `app/globals.css` `app/layout.tsx` | ✅ 文言は lib/i18n.tsx に集約 |
 | └ ヘルプ（FAQ） | `app/help/page.tsx` `lib/help.ts` | ✅ フルオンチェーンの説明・お金の流れ・mint の仕方・描き方・ショートカット（EN/JP）。**数値（手数料・上限）を変えたら lib/help.ts も直す** |
+| └ ODD モード（サイズ +1 = 9〜129。真ん中のマスができる・中心に十字ガイド・切り替えても絵は残る） | `app/page.tsx` `lib/pix.ts` regrid | ✅ 2026-10-23 |
 | └ PNG 保存（約2048px・ぼかしなし） | `lib/pix.ts` exportPng | ✅ 左の列の一番下 |
 | └ ウォレット選択 | `components/Header.tsx` `app/providers.tsx` | ブラウザ拡張 / WalletConnect / ローカル用テストウォレット |
 | デプロイ | `scripts/deploy.mjs`（`npm run deploy`） | ✅ ローカルで確認 |

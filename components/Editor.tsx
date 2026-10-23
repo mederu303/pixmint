@@ -84,6 +84,10 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   return (
     <div className="canvas-wrap">
       <canvas ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      {size % 2 === 1 && (
+        // 奇数サイズのときは真ん中のマスに十字のガイド（表示だけ。絵には入らない）
+        <div className="center-guide" style={{ ['--cell' as string]: `${100 / size}%` }} aria-hidden />
+      )}
     </div>
   );
 }

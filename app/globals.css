@@ -228,3 +228,12 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 /* 作者が自分で付けた表示名（検証なし）。.eth / Basename と見分けられるように点線の下線 */
 .pixname { text-decoration: underline dotted var(--dim); text-underline-offset: 3px; }
 .pixname::before { content: '@'; color: var(--dim); }
+
+/* ODD モードの中心ガイド: 真ん中の1マスの行と列を薄く示す */
+.center-guide { position: absolute; inset: 0; pointer-events: none; }
+.center-guide::before, .center-guide::after { content: ''; position: absolute; background: rgba(0, 255, 65, 0.14); outline: 1px dashed rgba(0, 255, 65, 0.35); }
+.center-guide::before { left: calc(50% - var(--cell) / 2); width: var(--cell); top: 0; bottom: 0; }
+.center-guide::after { top: calc(50% - var(--cell) / 2); height: var(--cell); left: 0; right: 0; }
+
+/* 上限に近いときの注意 */
+.warn, .note.warn { color: #ffb020; }

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PixCanvas, Swatches, ToolIcon } from '../components/Editor';
 import { MintPanel } from '../components/MintPanel';
 import { useI18n } from '../lib/i18n';
-import { DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, exportPng, exportScale, newGrid, type PixGrid, type PixTool } from '../lib/pix';
+import { ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, type PixGrid, type PixTool } from '../lib/pix';
 
 const SAVE_KEY = 'pixmint-doc-v1';
 const PAL_KEY = 'pixmint-palettes-v1';
@@ -34,7 +34,7 @@ export default function Studio() {
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null');
-      if (s && Array.isArray(s.grid) && GRID_SIZES.includes(s.grid.length)) {
+      if (s && Array.isArray(s.grid) && ALL_SIZES.includes(s.grid.length)) {
         setGrid(s.grid);
         if (s.bg) setBg(s.bg);
         if (s.color) setColor(s.color);
@@ -86,11 +86,20 @@ export default function Studio() {
     bump((n) => n + 1);
   };
 
-  const resize = (size: number) => {
+  const odd = isOdd(grid.length);
+  const resize = (base: number) => {
+    const size = odd ? base + 1 : base;
     if (size === grid.length) return;
     if (grid.some((r) => r.some(Boolean)) && !window.confirm(t('editor.resizeConfirm'))) return;
     history.current = [];
     setGrid(newGrid(size));
+  };
+  // ODD の切り替えは絵を残す（1列・1行を足す／削る）。削る側に絵があるときだけ確認する
+  const toggleOdd = () => {
+    const size = odd ? grid.length - 1 : grid.length + 1;
+    if (wouldCrop(grid, size) && !window.confirm(t('editor.oddCropConfirm'))) return;
+    beginStroke();
+    setGrid(regrid(grid, size));
   };
 
   const clear = () => {
@@ -181,17 +190,20 @@ export default function Studio() {
             </label>
             <select
               className="gridsel"
-              value={grid.length}
+              value={baseSize(grid.length)}
               onChange={(e) => resize(Number(e.target.value))}
               aria-label={t('editor.grid')}
               title={t('editor.grid')}
             >
               {GRID_SIZES.map((s) => (
                 <option key={s} value={s}>
-                  {s}×{s}
+                  {odd ? s + 1 : s}×{odd ? s + 1 : s}
                 </option>
               ))}
             </select>
+            <button className={`tool ${odd ? 'on' : ''}`} onClick={toggleOdd} title={t('editor.oddHint')} aria-pressed={odd}>
+              ODD
+            </button>
           </div>
         </div>
 

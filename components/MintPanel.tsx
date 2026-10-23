@@ -134,12 +134,13 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
             <span>{t('mint.colors')}</span>
             <b>{encoded.info.colors}</b>
             <span>{t('mint.runs')}</span>
-            <b>
+            <b className={encoded.info.runs >= PXM_MAX_RUNS * 0.8 ? 'warn' : undefined}>
               {encoded.info.runs.toLocaleString()} / {PXM_MAX_RUNS.toLocaleString()} (
               {Math.round((encoded.info.runs / PXM_MAX_RUNS) * 100)}%)
             </b>
           </div>
         )}
+        {encoded.info && encoded.info.runs >= PXM_MAX_RUNS * 0.8 && <p className="note warn">{t('mint.nearLimit')}</p>}
       </div>
 
       <div className="panel stack">
