@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatEther, formatGwei, parseEventLogs } from 'viem';
 import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
@@ -18,6 +19,7 @@ const toHex = (b: Uint8Array) => ('0x' + Array.from(b, (x) => x.toString(16).pad
 
 export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
   const { t, lang } = useI18n();
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [royalty, setRoyalty] = useState(500);
   const [chainId, setChainId] = useState<number>(PIX_CHAINS[0]?.chain.id ?? 0);
@@ -108,8 +110,10 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
       const ev = parseEventLogs({ abi: PIXMINT_ABI, logs: receipt.logs, eventName: 'Minted' })[0] as
         | { args: { id: bigint } }
         | undefined;
-      setStatus({ kind: 'ok', text: t('mint.done'), id: ev?.args.id });
+      setStatus({ kind: 'ok', text: ev ? t('mint.opening') : t('mint.done'), id: ev?.args.id });
       setSameTick((n) => n + 1);
+      // 少し見せてから作品ページへ（描いた絵はこのブラウザに残っている）
+      if (ev) setTimeout(() => router.push(`/${chainId}/${ev.args.id}`), 1200);
     } catch (e) {
       const msg = (e as { shortMessage?: string; message: string }).shortMessage ?? (e as Error).message;
       setStatus({ kind: 'bad', text: msg.split('\n')[0] });

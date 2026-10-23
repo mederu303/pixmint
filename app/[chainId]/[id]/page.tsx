@@ -34,9 +34,13 @@ export default function WorkPage() {
       setError(t('work.noChain'));
       return;
     }
-    readWork(chainId, id)
-      .then(setW)
-      .catch(() => setError(t('work.notFound')));
+    // mint した直後は、公開 RPC がまだそのブロックを知らないことがある。少し待って何度か読み直してから「見つからない」にする
+    let tries = 0;
+    const attempt = () =>
+      readWork(chainId, id)
+        .then(setW)
+        .catch(() => (++tries < 6 ? setTimeout(attempt, 1500) : setError(t('work.notFound'))));
+    attempt();
     readNum(chainId, 'feeBps').then(setFeeBps).catch(() => {});
   }, [chainId, id]);
   useEffect(load, [load]);

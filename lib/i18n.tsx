@@ -86,6 +86,7 @@ const en = {
   'mint.confirm': 'Confirm in your wallet…',
   'mint.writing': 'Writing to the chain…',
   'mint.done': 'Minted',
+  'mint.opening': 'Minted! Opening your work…',
   'mint.failed': 'Transaction failed',
   'mint.toWork': 'View work',
 
@@ -219,6 +220,7 @@ const ja: Record<Key, string> = {
   'mint.confirm': 'ウォレットで確認してください…',
   'mint.writing': 'チェーンに書き込み中…',
   'mint.done': 'mint しました',
+  'mint.opening': 'mint しました！作品ページを開きます…',
   'mint.failed': 'トランザクションが失敗しました',
   'mint.toWork': '作品ページへ',
 
