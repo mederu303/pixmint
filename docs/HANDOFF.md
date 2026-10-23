@@ -4,7 +4,7 @@
 
 ## 何か
 atelier の PIX で描いたドット絵を ETH / Base に**完全オンチェーン**で mint するページ。
-mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`。GitHub: **https://github.com/mederu303/pixmint**（公開・2026-10-24〜）。Vercel へは CLI でデプロイしている（GitHub とはまだつないでいない）。
+mederu X とは別プロジェクト。置き場所は `~/antigravity/pixmint`。GitHub: **https://github.com/mederu303/pixmint**（公開・2026-10-24〜）。Vercel は GitHub とつないである（2026-10-24〜）: **main に push すると本番に自動でデプロイ**、ほかのブランチはプレビュー。`vercel deploy` で手元から出すこともできる。
 
 ## できていること
 | | ファイル | 状態 |
