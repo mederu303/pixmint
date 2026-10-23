@@ -1,0 +1,13 @@
+*.tsbuildinfo
+# 秘密鍵・ローカル設定（.env.example だけコミットする）
+.env
+.env.*
+!.env.example
+.hardhat.log
+.next/
+next-env.d.ts
+node_modules/
+out/
+# 手元のバックアップ（tgz）
+_archive/
+.DS_Store

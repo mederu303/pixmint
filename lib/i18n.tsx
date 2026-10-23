@@ -1,0 +1,241 @@
+'use client';
+// pixmint — 表示言語（EN / JP）。既定は英語。選んだ言語はこのブラウザに残す
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+
+const en = {
+  'nav.draw': 'Draw',
+  'nav.works': 'Works',
+  'nav.help': 'Help',
+  'wallet.connect': 'Connect wallet',
+  'wallet.connecting': 'Connecting…',
+  'wallet.browser': 'Browser extension',
+  'wallet.wc': 'WalletConnect (mobile)',
+  'wallet.testArtist': 'Test wallet: artist',
+  'wallet.testBuyer': 'Test wallet: buyer',
+  'wallet.setName': 'Display name',
+  'wallet.disconnect': 'Disconnect',
+  footer: 'pixmint by mederu.art · every pixel lives on-chain',
+
+  'tool.pen': 'Pen',
+  'tool.eraser': 'Eraser',
+  'tool.fill': 'Fill',
+  'tool.picker': 'Picker',
+  'tool.undo': 'Undo',
+  'tool.clear': 'Clear',
+  'editor.color': 'Color',
+  'editor.bg': 'Background',
+  'editor.bgShort': 'BG',
+  'editor.palette': 'Palette',
+  'editor.grid': 'Grid',
+  'editor.resetPalette': 'Reset',
+  'editor.resizeConfirm': 'Changing the grid size clears your drawing. Continue?',
+  'editor.editHint': 'Color edits update the selected swatch',
+  'editor.download': 'Download PNG',
+  'editor.downloadHint': '{px}px · for X / social',
+
+  'mint.onchain': 'On-chain image',
+  'mint.data': 'Data',
+  'mint.colors': 'Colors',
+  'mint.runs': 'Runs',
+  'mint.tooDetailed': 'Too detailed to render on-chain. Use fewer colors or merge similar ones.',
+  'mint.title': 'Title · permanent',
+  'mint.titlePh': 'Untitled → pixmint #id',
+  'mint.bytes': '{n}/{max} bytes',
+  'mint.royalty': 'Resale royalty · permanent',
+  'mint.chain': 'Chain',
+  'mint.noChain': 'No contract configured (NEXT_PUBLIC_PIXMINT_* in .env.local)',
+  'mint.fee': 'Mint fee',
+  'mint.free': 'Free',
+  'mint.gas': 'Gas (estimate)',
+  'mint.about': '≈ {v} ETH',
+  'mint.baseNote': 'Base adds a small L1 data fee',
+  'mint.button': 'Mint on {chain}',
+  'mint.busy': 'Processing…',
+  'mint.confirm': 'Confirm in your wallet…',
+  'mint.writing': 'Writing to the chain…',
+  'mint.done': 'Minted',
+  'mint.failed': 'Transaction failed',
+  'mint.toWork': 'View work',
+
+  'gallery.count': '{n} works',
+  'gallery.empty': 'No works yet.',
+  'gallery.more': 'Load more',
+
+  'work.by': 'by',
+  'work.loading': 'Loading…',
+  'work.notFound': 'Work not found',
+  'work.noChain': 'This chain is not configured',
+  'work.artist': 'Artist',
+  'work.owner': 'Owner',
+  'work.grid': 'Grid',
+  'work.colors': 'Colors',
+  'work.royalty': 'Royalty',
+  'work.minted': 'Minted',
+  'work.storage': 'Storage',
+  'work.fullyOnchain': 'Fully on-chain',
+  'work.forSale': 'For sale',
+  'work.fee': 'mederu fee',
+  'work.toArtist': 'To artist',
+  'work.toOwner': 'To owner',
+  'work.unlist': 'Cancel listing',
+  'work.buy': 'Buy',
+  'work.listTitle': 'List for sale on pixmint (fee {fee}%)',
+  'work.list': 'List',
+  'work.notForSale': 'Not for sale',
+  'work.note': 'The image lives inside the contract, which also renders the SVG. No IPFS, no server.',
+
+  'me.title': 'Display name',
+  'me.desc':
+    'Shown instead of your address on works and lists. You can change it any time (your works stay the same). Without one, we show your .eth, then Basename, then the address.',
+  'me.connect': 'Connect a wallet to set your display name.',
+  'me.current': 'Shown as',
+  'me.onChain': 'Name on {chain}',
+  'me.ph': 'e.g. medenyan',
+  'me.saveChain': 'Chain to save on (each chain keeps its own name)',
+  'me.save': 'Save on {chain}',
+};
+
+type Key = keyof typeof en;
+
+const ja: Record<Key, string> = {
+  'nav.draw': '描く',
+  'nav.works': '作品',
+  'nav.help': 'ヘルプ',
+  'wallet.connect': 'ウォレット接続',
+  'wallet.connecting': '接続中…',
+  'wallet.browser': 'ブラウザ拡張',
+  'wallet.wc': 'WalletConnect（スマホ）',
+  'wallet.testArtist': 'テスト用：作者',
+  'wallet.testBuyer': 'テスト用：購入者',
+  'wallet.setName': '表示名を設定',
+  'wallet.disconnect': '切断',
+  footer: 'pixmint by mederu.art · 絵はすべてチェーンの中にあります',
+
+  'tool.pen': 'ペン',
+  'tool.eraser': '消しゴム',
+  'tool.fill': '塗りつぶし',
+  'tool.picker': 'スポイト',
+  'tool.undo': '戻す',
+  'tool.clear': '全消し',
+  'editor.color': '色',
+  'editor.bg': '背景',
+  'editor.bgShort': '背景',
+  'editor.palette': 'パレット',
+  'editor.grid': 'グリッド',
+  'editor.resetPalette': '元に戻す',
+  'editor.resizeConfirm': 'サイズを変えると今の絵は消えます。続けますか？',
+  'editor.editHint': '色を変えると選んだ枠も変わります',
+  'editor.download': 'PNG を保存',
+  'editor.downloadHint': '{px}px · X 投稿向け',
+
+  'mint.onchain': 'チェーンに載る絵',
+  'mint.data': 'データ',
+  'mint.colors': '色数',
+  'mint.runs': 'ラン',
+  'mint.tooDetailed': '細かすぎてチェーン上で描けません。色数を減らすか、同じ色をまとめてください。',
+  'mint.title': 'タイトル（変更不可）',
+  'mint.titlePh': '無題なら pixmint #番号',
+  'mint.bytes': '{n}/{max} bytes',
+  'mint.royalty': '二次販売ロイヤリティ（変更不可）',
+  'mint.chain': 'チェーン',
+  'mint.noChain': 'コントラクトが設定されていません（.env.local の NEXT_PUBLIC_PIXMINT_*）',
+  'mint.fee': 'mint 手数料',
+  'mint.free': '無料',
+  'mint.gas': 'ガス代（目安）',
+  'mint.about': '約 {v} ETH',
+  'mint.baseNote': 'Base は L1 データ代が少し上乗せされます',
+  'mint.button': '{chain} で mint',
+  'mint.busy': '処理中…',
+  'mint.confirm': 'ウォレットで確認してください…',
+  'mint.writing': 'チェーンに書き込み中…',
+  'mint.done': 'mint しました',
+  'mint.failed': 'トランザクションが失敗しました',
+  'mint.toWork': '作品ページへ',
+
+  'gallery.count': '{n} 点',
+  'gallery.empty': 'まだ作品がありません。',
+  'gallery.more': 'もっと見る',
+
+  'work.by': 'by',
+  'work.loading': '読み込み中…',
+  'work.notFound': '作品が見つかりません',
+  'work.noChain': 'このチェーンは設定されていません',
+  'work.artist': '作者',
+  'work.owner': '持ち主',
+  'work.grid': 'グリッド',
+  'work.colors': '色数',
+  'work.royalty': 'ロイヤリティ',
+  'work.minted': 'mint',
+  'work.storage': '保存',
+  'work.fullyOnchain': '完全オンチェーン',
+  'work.forSale': '販売中',
+  'work.fee': 'mederu 手数料',
+  'work.toArtist': '作者へ',
+  'work.toOwner': '持ち主へ',
+  'work.unlist': '出品をやめる',
+  'work.buy': '購入する',
+  'work.listTitle': '出品する（pixmint 内で販売。手数料 {fee}%）',
+  'work.list': '出品',
+  'work.notForSale': '販売していません',
+  'work.note': '絵はコントラクトの中にあり、SVG もコントラクトが組み立てます。IPFS やサーバーには依存していません。',
+
+  'me.title': '表示名',
+  'me.desc':
+    '作品や一覧で、アドレスの代わりにこの名前が出ます。いつでも変えられます（作品そのものは変わりません）。設定していなければ .eth → Basename → アドレスの順で表示します。',
+  'me.connect': '表示名を設定するにはウォレットを接続してください。',
+  'me.current': 'いまの表示',
+  'me.onChain': '{chain} の表示名',
+  'me.ph': '例: medenyan',
+  'me.saveChain': '保存するチェーン（チェーンごとに別々に保存されます）',
+  'me.save': '{chain} に保存',
+};
+
+export type Lang = 'en' | 'ja';
+const DICT: Record<Lang, Record<Key, string>> = { en, ja };
+const KEY = 'pixmint-lang';
+
+interface Ctx {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (k: Key, vars?: Record<string, string | number>) => string;
+}
+
+const I18n = createContext<Ctx>({ lang: 'en', setLang: () => {}, t: (k) => en[k] });
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>('en');
+  useEffect(() => {
+    try {
+      const l = localStorage.getItem(KEY);
+      if (l === 'ja' || l === 'en') setLangState(l);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    try {
+      localStorage.setItem(KEY, l);
+    } catch {}
+  };
+  const t = (k: Key, vars?: Record<string, string | number>) =>
+    (DICT[lang][k] ?? en[k]).replace(/\{(\w+)\}/g, (_, v) => String(vars?.[v] ?? ''));
+  return <I18n.Provider value={{ lang, setLang, t }}>{children}</I18n.Provider>;
+}
+
+export const useI18n = () => useContext(I18n);
+
+export function LangToggle() {
+  const { lang, setLang } = useI18n();
+  return (
+    <div className="lang">
+      <button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>
+        EN
+      </button>
+      <button className={lang === 'ja' ? 'on' : ''} onClick={() => setLang('ja')}>
+        JP
+      </button>
+    </div>
+  );
+}

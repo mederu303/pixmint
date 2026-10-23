@@ -1,0 +1,36 @@
+{
+  "name": "pixmint",
+  "version": "1.0.0",
+  "description": "Fully on-chain pixel art mint for ETH and Base",
+  "scripts": {
+    "test": "node --experimental-strip-types test/run.mjs",
+    "dev": "next dev -p 3333",
+    "build": "next build",
+    "start": "next start",
+    "chain": "hardhat node",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "@ethereumjs/common": "^4.4.0",
+    "@ethereumjs/tx": "^5.4.0",
+    "@ethereumjs/util": "^9.1.0",
+    "@ethereumjs/vm": "^8.1.1",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@tanstack/react-query": "^5.104.5",
+    "@walletconnect/ethereum-provider": "^2.26.0",
+    "next": "^15.5.28",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "solc": "^0.8.28",
+    "viem": "^2.57.10",
+    "wagmi": "^2.19.5"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "hardhat": "^2.29.1",
+    "playwright": "^1.64.1",
+    "typescript": "^5.9.3"
+  }
+}
