@@ -3,8 +3,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 const en = {
-  'nav.draw': 'Draw',
-  'nav.works': 'Works',
+  // ロゴの PIX + MINT を分けた名前。行き先は title で補う
+  'nav.draw': 'Pix',
+  'nav.works': 'Minted',
+  'nav.drawTip': 'Draw and mint',
+  'nav.worksTip': 'All minted works',
   'nav.help': 'Help',
   'wallet.connect': 'Connect wallet',
   'wallet.connecting': 'Connecting…',
@@ -151,8 +154,10 @@ const en = {
 type Key = keyof typeof en;
 
 const ja: Record<Key, string> = {
-  'nav.draw': '描く',
-  'nav.works': '作品',
+  'nav.draw': 'Pix',
+  'nav.works': 'Minted',
+  'nav.drawTip': '描いて mint する',
+  'nav.worksTip': 'mint された作品の一覧',
   'nav.help': 'ヘルプ',
   'wallet.connect': 'ウォレット接続',
   'wallet.connecting': '接続中…',

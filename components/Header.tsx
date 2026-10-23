@@ -18,10 +18,10 @@ export function Header() {
         pixmint
       </Link>
       <nav>
-        <Link href="/" className={path === '/' ? 'on' : ''}>
+        <Link href="/" className={path === '/' ? 'on' : ''} title={t('nav.drawTip')}>
           {t('nav.draw')}
         </Link>
-        <Link href="/gallery" className={path.startsWith('/gallery') ? 'on' : ''}>
+        <Link href="/gallery" className={path.startsWith('/gallery') ? 'on' : ''} title={t('nav.worksTip')}>
           {t('nav.works')}
         </Link>
         <Link href="/help" className={path.startsWith('/help') ? 'on' : ''}>
