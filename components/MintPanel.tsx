@@ -7,6 +7,7 @@ import { Wallet } from './Header';
 import { encodePxm, pxmToSvg, validatePxm, PXM_MAX_RUNS } from '../src/pxm';
 import { LABEL, PIX_CHAINS, pixChain } from '../lib/chains';
 import { PIXMINT_ABI, client, estimateMintGas, readNum, svgUrl } from '../lib/contract';
+import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cost';
 import { flatten, type PixGrid } from '../lib/pix';
 import { useI18n } from '../lib/i18n';
 
@@ -16,11 +17,10 @@ const enc = new TextEncoder();
 const toHex = (b: Uint8Array) => ('0x' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')) as `0x${string}`;
 
 export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [title, setTitle] = useState('');
   const [royalty, setRoyalty] = useState(500);
   const [chainId, setChainId] = useState<number>(PIX_CHAINS[0]?.chain.id ?? 0);
-  const [gasPrice, setGasPrice] = useState<bigint | null>(null);
   const [mintPrice, setMintPrice] = useState<bigint>(0n);
   const [status, setStatus] = useState<{ kind: 'idle' | 'busy' | 'ok' | 'bad'; text?: string; id?: bigint }>({
     kind: 'idle',
@@ -46,46 +46,25 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
   useEffect(() => {
     if (!chainId) return;
     let live = true;
-    setGasPrice(null);
-    // ガス価格はブロックごとに動くので 12 秒ごとに取り直す
-    const poll = () => client(chainId).getGasPrice().then((g) => live && setGasPrice(g)).catch(() => {});
-    poll();
-    const timer = setInterval(poll, 12_000);
     readNum(chainId, 'mintPrice').then((p) => live && setMintPrice(p)).catch(() => {});
     return () => {
       live = false;
-      clearInterval(timer);
     };
   }, [chainId]);
 
-  // gas はチェーンに聞く（Glamsterdam のような料金改定に追従するため）。聞けないときだけ式で概算
-  const [chainGas, setChainGas] = useState<bigint | null>(null);
-  useEffect(() => {
-    setChainGas(null);
-    const p = pixChain(chainId);
-    if (!p || !encoded.bytes || titleBad) return;
-    let live = true;
-    const bytes = encoded.bytes;
-    const timer = setTimeout(() => {
-      client(chainId)
-        .estimateContractGas({
-          address: p.address,
-          abi: PIXMINT_ABI,
-          functionName: 'mint',
-          args: [toHex(bytes), title.trim(), royalty],
-          value: mintPrice,
-          account: address ?? '0x000000000000000000000000000000000000dEaD',
-        })
-        .then((g) => live && setChainGas(g))
-        .catch(() => {});
-    }, 500);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [chainId, encoded.bytes, title, titleBad, royalty, mintPrice, address]);
-  const gas = chainGas ?? (encoded.bytes ? BigInt(estimateMintGas(encoded.bytes.length, titleBytes)) : 0n);
-  const fee = gasPrice != null ? gas * gasPrice : null;
+  // gas はチェーンに聞く（Glamsterdam のような料金改定に追従するため）。全チェーン分を並べて比べる
+  const mintArgs = useMemo(
+    () => (encoded.bytes && !titleBad ? ([toHex(encoded.bytes), title.trim(), royalty] as const) : null),
+    [encoded.bytes, titleBad, title, royalty],
+  );
+  const costs = useMintCosts(mintArgs, mintPrice, address);
+  const price = useEthPrice();
+  const cur = costs[chainId];
+  // 聞けないときだけ式で概算
+  const gas = cur?.gas ?? (encoded.bytes ? BigInt(estimateMintGas(encoded.bytes.length, titleBytes)) : 0n);
+  const gasPrice = cur?.gasPrice ?? null;
+  const fee = gasPrice != null ? gas * gasPrice + (cur?.l1 ?? 0n) : null;
+  const hint = useMemo(() => colorHint(grid, bg, encoded.bytes?.length ?? 0), [grid, bg, encoded.bytes]);
 
   async function mint() {
     if (!encoded.bytes) return;
@@ -186,16 +165,45 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
           <span>{t('mint.fee')}</span>
           <b>{mintPrice === 0n ? t('mint.free') : `${formatEther(mintPrice)} ETH`}</b>
           <span>{t('mint.gas')}</span>
-          <b>{fee != null ? t('mint.about', { v: Number(formatEther(fee)).toPrecision(2) }) : '—'}</b>
+          <b>
+            {fee != null ? t('mint.about', { v: Number(formatEther(fee)).toPrecision(2) }) : '—'}
+            {fee != null && fiat(fee, price, lang) && <span className="dim"> · {fiat(fee, price, lang)}</span>}
+          </b>
           <span>{t('mint.gasUnits')}</span>
           <b>
             {gas.toLocaleString()} gas{gasPrice != null && ` × ${Number(formatGwei(gasPrice)).toPrecision(2)} gwei`}
           </b>
         </div>
-        <p className="note">{t('mint.live')}</p>
-        {chainId === 8453 || chainId === 84532 ? (
-          <p className="note">{t('mint.baseNote')}</p>
-        ) : null}
+        {PIX_CHAINS.length > 1 && (
+          <div className="compare">
+            <span className="note">{t('mint.compare')}</span>
+            {PIX_CHAINS.map((p) => {
+              const c = costs[p.chain.id];
+              return (
+                <button
+                  key={p.chain.id}
+                  className={`cmp ${chainId === p.chain.id ? 'on' : ''}`}
+                  onClick={() => setChainId(p.chain.id)}
+                >
+                  <span>{LABEL[p.chain.id]}</span>
+                  <b>{c?.total != null ? `${Number(formatEther(c.total)).toPrecision(2)} ETH` : '…'}</b>
+                  <span className="dim">{c?.total != null ? fiat(c.total, price, lang) ?? '' : ''}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {hint && hint.saving >= 0.03 && (
+          <p className="note">
+            {t('mint.colorHint', { color: hint.color, cells: hint.cells, pct: Math.round(hint.saving * 100) })}{' '}
+            <span className="swatch-dot" style={{ background: hint.color }} />
+          </p>
+        )}
+        <p className="note">
+          {t('mint.live')}
+          {TESTNETS.includes(chainId) && price ? ` · ${t('mint.testnetFiat')}` : ''}
+        </p>
+        {OP_CHAINS.includes(chainId) ? <p className="note">{t('mint.baseNote')}</p> : null}
 
         {isConnected ? (
           <button onClick={mint} disabled={!ready}>
@@ -218,4 +226,35 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
       </div>
     </div>
   );
+}
+
+/**
+ * いちばん使っていない色（背景以外）をいちばん近い色にまとめたら、データが何 % 減るか。
+ * mint の gas はほぼデータ量に比例するので、減る割合 ≒ 安くなる割合の目安（固定分があるので実際は少し小さい）
+ */
+function colorHint(grid: PixGrid, bg: string, bytes: number) {
+  if (!bytes) return null;
+  const flat = flatten(grid, bg);
+  const key = (c: string | null) => (c ?? bg).toLowerCase();
+  const count = new Map<string, number>();
+  for (const row of flat) for (const c of row) count.set(key(c), (count.get(key(c)) ?? 0) + 1);
+  if (count.size < 3) return null;
+  const bgKey = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const [color, cells] = [...count.entries()].filter(([c]) => c !== bgKey).sort((a, b) => a[1] - b[1])[0];
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [r, g, b] = rgb(color);
+  let near = bgKey;
+  let best = Infinity;
+  for (const c of count.keys()) {
+    if (c === color) continue;
+    const [r2, g2, b2] = rgb(c);
+    const d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2;
+    if (d < best) [best, near] = [d, c];
+  }
+  try {
+    const merged = encodePxm(flat.map((row) => row.map((c) => (key(c) === color ? near : c))), bg);
+    return { color, cells, saving: (bytes - merged.length) / bytes };
+  } catch {
+    return null;
+  }
 }

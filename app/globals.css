@@ -237,3 +237,11 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 
 /* 上限に近いときの注意 */
 .warn, .note.warn { color: #ffb020; }
+
+/* チェーンごとの費用の比較 */
+.compare { display: grid; gap: 4px; }
+.compare .cmp { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: baseline; text-align: left; padding: 6px 10px; color: var(--dim); border-color: var(--line-hi); box-shadow: none; text-transform: none; letter-spacing: 0.02em; font-size: 11px; }
+.compare .cmp b { color: var(--fg, inherit); font-weight: 500; }
+.compare .cmp.on { color: var(--accent); border-color: var(--accent); }
+.dim { color: var(--dim); }
+.swatch-dot { display: inline-block; width: 10px; height: 10px; vertical-align: middle; border: 1px solid var(--line-hi); }
