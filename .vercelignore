@@ -1,0 +1,10 @@
+# Vercel に送らないもの（秘密鍵・ローカル設定・バックアップ・生成物）
+.env
+.env.*
+!.env.example
+_archive
+.hardhat.log
+.next
+out
+node_modules
+*.command
