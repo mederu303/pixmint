@@ -3,7 +3,9 @@
 //   1. 縦横比を保ってグリッドに収める（余白は透明 = null）。縮小はブラウザの高品質な補間（面積平均に近い）
 //   2. 半透明より薄いマスは透明にする
 //   3. 色を減らす: median cut で N 色を作る、または今のパレットの近い色に寄せる。Floyd–Steinberg のディザも選べる
-//   4. チェーン上の上限（ラン 2,048）を超えたら、収まるまで色数を自動で下げる
+//   4. チェーン上の上限（ラン 2,048）を超えたら、収まるまで調整する。
+//      既定は「色数を優先」: 小さな点（1〜数マスだけ違う色）を周りの色にまとめてランを減らす。色数はそのまま
+//      「細部を優先」: 色数を下げる（点は残るが色が減る）。色数を優先でも収まらないときは色数を下げる
 import { encodePxm, PXM_MAX_RUNS, validatePxm } from '../src/pxm';
 import type { PixGrid } from './pix';
 
@@ -13,6 +15,8 @@ export interface ConvertOptions {
   colors: number; // 目標の色数（2〜64）
   dither: boolean;
   palette?: string[]; // 指定すればこの色だけを使う
+  /** 上限を超えたときに何を残すか。'colors' = 色数を残して小さな点をまとめる（既定）/ 'detail' = 点を残して色数を下げる */
+  keep?: 'colors' | 'detail';
 }
 
 export interface ConvertResult {
@@ -20,6 +24,7 @@ export interface ConvertResult {
   colors: number; // 実際に使った色数
   runs: number;
   reduced: boolean; // 上限に収めるために色数を下げた
+  simplified: boolean; // 上限に収めるために小さな点をまとめた
 }
 
 const hex = ([r, g, b]: RGB) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
@@ -219,7 +224,7 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
       const grid = quantize(rgba, size, [...uniq.values()], false);
       try {
         const info = validatePxm(encodePxm(grid.map((row) => row.map((c) => c ?? bg)), bg));
-        return { grid, colors: info.colors, runs: info.runs, reduced: false };
+        return { grid, colors: info.colors, runs: info.runs, reduced: false, simplified: false };
       } catch {}
     }
   }
@@ -241,14 +246,22 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
     const grid = quantize(rgba, size, pal, opt.dither);
     try {
       const info = validatePxm(encodePxm(grid.map((row) => row.map((c) => c ?? bg)), bg));
-      return { grid, colors: info.colors, runs: info.runs, reduced };
+      return { grid, colors: info.colors, runs: info.runs, reduced, simplified: false };
     } catch {
+      // 色数を優先: 小さな点をまとめて収める（最初の色数のときだけ。収まらなければ色数を下げる）
+      if ((opt.keep ?? 'colors') === 'colors' && !reduced) {
+        const fit = simplifyToFit(grid, bg, PXM_MAX_RUNS);
+        if (fit) {
+          const info = validatePxm(encodePxm(fit.map((row) => row.map((c) => c ?? bg)), bg));
+          return { grid: fit, colors: info.colors, runs: info.runs, reduced: false, simplified: true };
+        }
+      }
       // ラン 2,048 超え。ディザは細かくなりやすいので、まず色数を下げる
       if (n <= 2) {
         // 2 色でも収まらない（細かいディザなど）→ ディザを切ってもう一度
         if (opt.dither) return { ...convert(rgba, size, bg, { ...opt, dither: false }), reduced: true };
         const grid2 = quantize(rgba, size, pal, false);
-        return { grid: grid2, colors: pal.length, runs: PXM_MAX_RUNS + 1, reduced: true };
+        return { grid: grid2, colors: pal.length, runs: PXM_MAX_RUNS + 1, reduced: true, simplified: false };
       }
       n = Math.max(2, Math.floor(n * 0.75));
       reduced = true;
@@ -258,6 +271,111 @@ export function convert(rgba: Uint8ClampedArray, size: number, bg: string, opt: 
 
 /** 読み込んだ画像（ImageBitmap か、SVG を描いたキャンバス） */
 export type LoadedImage = CanvasImageSource & { width: number; height: number };
+
+/** ラン数（空のマスは背景色として数える。encodePxm と同じ数え方） */
+export function countRuns(grid: PixGrid, bg: string): number {
+  let n = 0;
+  for (const row of grid) {
+    let prev: string | undefined;
+    for (const c of row) {
+      const k = c ?? bg;
+      if (k !== prev) n++;
+      prev = k;
+    }
+  }
+  return n;
+}
+
+/**
+ * 色数を変えずにランを減らす。上限に収まった時点でやめる（必要以上に崩さない）。
+ *   1. 点の掃除（最大 2 回）: 周り 8 マスに同じ色が 1 つも無いマスを、周りでいちばん多い色にする
+ *   2. 短いランの吸収: 長さ k 以下のランを、左右のうち色が近い方に塗り替える（k = 1, 2, 3, … と少しずつ上げる）
+ * 収まらなければ null（呼び出し側で色数を下げる）
+ */
+export function simplifyToFit(src: PixGrid, bg: string, max: number): PixGrid | null {
+  const size = src.length;
+  const key = (c: string | null) => c ?? bg;
+  let g = src.map((r) => [...r]);
+  if (countRuns(g, bg) <= max) return g;
+  for (let pass = 0; pass < 2; pass++) {
+    const next = g.map((r) => [...r]);
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++) {
+        const me = key(g[r][c]);
+        const counts = new Map<string, { n: number; v: string | null }>();
+        let same = false;
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++) {
+            if (!dr && !dc) continue;
+            const rr = r + dr, cc = c + dc;
+            if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+            const v = g[rr][cc], k = key(v);
+            if (k === me) same = true;
+            const e = counts.get(k);
+            if (e) e.n++;
+            else counts.set(k, { n: 1, v });
+          }
+        if (same || !counts.size) continue;
+        next[r][c] = [...counts.values()].sort((a, b) => b.n - a.n)[0].v;
+      }
+    g = next;
+    if (countRuns(g, bg) <= max) return g;
+  }
+  const rgbOf = (c: string | null): RGB => parse(key(c));
+  let total = countRuns(g, bg);
+  // 行 r の x を含むランの左右の端
+  const span = (row: (string | null)[], x: number) => {
+    let i = x, j = x;
+    while (i > 0 && key(row[i - 1]) === key(row[x])) i--;
+    while (j < size - 1 && key(row[j + 1]) === key(row[x])) j++;
+    return [i, j] as const;
+  };
+  // 塗り先: 左右のうち、色が近い方。上下のマスと同じ色なら優先する（横に流れた筋にならないように）
+  const target = (r: number, i: number, j: number) => {
+    const row = g[r];
+    const me = rgbOf(row[i]);
+    const opts: (string | null)[] = [];
+    if (i > 0) opts.push(row[i - 1]);
+    if (j < size - 1) opts.push(row[j + 1]);
+    let best: string | null = null, bd = Infinity;
+    for (const o of opts) {
+      let d = dist(me, rgbOf(o));
+      let vert = 0;
+      for (let x = i; x <= j; x++) {
+        if (r > 0 && key(g[r - 1][x]) === key(o)) vert++;
+        if (r < size - 1 && key(g[r + 1][x]) === key(o)) vert++;
+      }
+      d *= 1 / (1 + vert); // 上下とつながる色ほど選びやすく
+      if (d < bd) [bd, best] = [d, o];
+    }
+    return { to: best, d: bd };
+  };
+  for (let k = 1; k <= Math.max(2, Math.floor(size / 4)); k++) {
+    // 長さ k 以下のランを集め、目立たない（塗り先と色が近い）ものから塗る。収まった時点でやめる
+    const cands: { r: number; x: number; d: number }[] = [];
+    for (let r = 0; r < size; r++) {
+      let i = 0;
+      while (i < size) {
+        const [, j] = span(g[r], i);
+        if (j - i + 1 <= k && (i > 0 || j < size - 1)) cands.push({ r, x: i, d: target(r, i, j).d });
+        i = j + 1;
+      }
+    }
+    cands.sort((a, b) => a.d - b.d);
+    for (const { r, x } of cands) {
+      const row = g[r];
+      const [i, j] = span(row, x);
+      if (j - i + 1 > k || (i === 0 && j === size - 1)) continue;
+      const { to } = target(r, i, j);
+      // 塗るとランは 1 つ減り、左右が同じ色なら 2 つ減る
+      const both = i > 0 && j < size - 1 && key(row[i - 1]) === key(row[j + 1]);
+      for (let y = i; y <= j; y++) row[y] = to;
+      total -= both ? 2 : 1;
+      if (total <= max) return g;
+    }
+  }
+  return null;
+}
 
 /** ファイル / クリップボードの画像を読み込む。SVG は createImageBitmap で読めないので、<img> で描いてキャンバスにする */
 export async function loadImage(file: Blob): Promise<LoadedImage> {

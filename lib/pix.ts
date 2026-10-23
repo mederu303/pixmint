@@ -97,7 +97,7 @@ export function flatten(grid: PixGrid, bg: string): PixGrid {
   return grid.map((row) => row.map((c) => c ?? bg));
 }
 
-export const GRID_SIZES = [8, 16, 32, 48, 64, 128];
+export const GRID_SIZES = [8, 16, 32, 48, 64, 96, 128];
 /** ODD モード: 偶数のサイズ +1（9〜129）。ちょうど真ん中のマスができる。コントラクトの上限 129 に収まる */
 export const isOdd = (size: number) => size % 2 === 1;
 export const baseSize = (size: number) => (isOdd(size) ? size - 1 : size);

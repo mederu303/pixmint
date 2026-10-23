@@ -1,0 +1,93 @@
+Every pixel lives on-chain.
+
+pixmint is a pixel-art studio in your browser that mints straight to Ethereum and Base. The image is not a link to a file. The image is the contract.
+
+[IMAGE: 01-artwork.png — pixmint #1 on Base. This picture is the SVG the contract itself returned, copied byte for byte.]
+
+Most NFTs store a pointer. The token says "the image is over there," and over there is a server or an IPFS gateway that someone has to keep running. When it goes away, the token still exists but the picture does not.
+
+pixmint takes the other route. When you mint, the pixels themselves are written into the blockchain's state, and every time a wallet or a marketplace asks to see your work, the contract draws it again from that data. There is no server to switch off and no file to lose.
+
+
+Pointer vs. pixels
+
+[IMAGE: 02-pointer-vs-pixels.png]
+
+
+How a drawing becomes a token
+
+1. Draw
+Pick a grid from 8×8 up to 129×129 and paint. Odd sizes like 17×17 or 33×33 give you a true center pixel.
+
+2. Pack
+pixmint encodes the picture in its own compact format, PXM. It stores the palette once, then each row as runs: "this many cells of this color." A typical 32×32 piece is about 280 bytes. The same piece as an ordinary SVG file is about 1,500.
+
+3. Store
+On mint, the bytes go into a tiny contract of their own (a technique called SSTORE2). That contract begins with a STOP instruction, so it can never run, and since the Cancun upgrade nothing can delete its code.
+
+4. Render
+When anyone calls tokenURI, the pixmint contract reads those bytes and assembles the SVG and the metadata on the spot: title, artist, grid size, colors. Nothing is cached anywhere off-chain.
+
+[IMAGE: 03-how-it-works.png — optional, the same four steps as an image]
+
+[IMAGE: 04-pxm-bytes.png]
+
+That is the start of what pixmint #1 really looks like on-chain. The whole piece is 212 bytes, and the contract turns it back into the picture above.
+
+
+Ethereum or Base
+
+The same contract runs on both chains, and you choose per piece. On Ethereum, the data sits in state that every full node keeps, so it is the most durable home pixmint can offer. On Base, it lasts as long as Base and its nodes do, and it costs a fraction as much.
+
+A simple way to put it: Ethereum when it has to last, Base when you want to make a lot.
+
+[IMAGE: 05-numbers.png]
+
+
+The studio
+
+[IMAGE: 06-features.png — optional, the same list as an image]
+
+Draw
+Pen, eraser, fill, picker and a select tool with copy, cut, paste and move. Seven palettes of 30 colors (neon, gameboy, kawaii, vaporwave and more), each editable.
+
+Bring an image
+Drop a PNG, JPEG or SVG onto the canvas. Enlarged pixel art is detected and read cell by cell, so it stays sharp. Photos are reduced to the colors you choose, with optional dithering.
+
+See the price first
+Before you mint, pixmint shows the cost on each chain in dollars or yen, refreshed with live gas prices, and suggests which color to merge to make it cheaper.
+
+Mint with care
+You set a permanent title and a resale royalty from 0 to 10%. If you are about to mint a picture that already exists, pixmint tells you first.
+
+Sell in place
+List and buy inside pixmint. Every sale there pays the artist's royalty automatically. Works also appear on OpenSea and in wallets with no extra setup.
+
+Look around
+The Works page is public, no wallet required, and shows Ethereum and Base side by side. Artists appear by display name, .eth or Basename.
+
+
+Where the money goes
+
+Minting is free; you pay only the network's gas. When a work sells inside pixmint, mederu takes 2.5%, and the contract will never let that go above 5%, not even for its owner. On resales, the artist's chosen royalty is paid before the seller is. Outside marketplaces receive the same royalty through the ERC-2981 standard, though paying it there is up to the buyer.
+
+
+Check it yourself
+
+The source code of both contracts is published on Sourcify with an exact match, so anyone can confirm that the code on-chain is the code we describe here.
+
+Ethereum: 0xc8c425587a818fbfff287b59991fcf471fa47dd8
+https://repo.sourcify.dev/1/0xc8c425587a818fbfff287b59991fcf471fa47dd8
+
+Base: 0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8
+https://repo.sourcify.dev/8453/0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8
+
+pixmint #1 on OpenSea:
+https://opensea.io/item/base/0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8/1
+
+
+Start drawing → https://pixmint.mederu.art
+
+Works in any browser, with MetaMask, Rabby or a phone wallet over WalletConnect.
+
+pixmint by mederu.art · every pixel lives on-chain

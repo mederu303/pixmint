@@ -25,6 +25,7 @@ export function ImportDialog({
   const [colors, setColors] = useState(16);
   const [dither, setDither] = useState(false);
   const [usePalette, setUsePalette] = useState(false);
+  const [keep, setKeep] = useState<'colors' | 'detail'>('colors');
   const ref = useRef<HTMLCanvasElement>(null);
 
   // ドット絵の拡大画像なら元のマス目を読む（にじまない）。写真などはなめらかに縮める
@@ -36,8 +37,8 @@ export function ImportDialog({
     return dropBg ? dropBackground(raw, bg) : raw;
   }, [art, asPixels, image, size, dropBg, bg]);
   const result = useMemo(
-    () => convert(rgba, size, bg, { colors, dither, palette: usePalette ? palette : undefined }),
-    [rgba, size, bg, colors, dither, usePalette, palette],
+    () => convert(rgba, size, bg, { colors, dither, palette: usePalette ? palette : undefined, keep }),
+    [rgba, size, bg, colors, dither, usePalette, palette, keep],
   );
 
   useEffect(() => {
@@ -111,6 +112,18 @@ export function ImportDialog({
             {t('import.usePalette')}
           </button>
         </div>
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="note">{t('import.keepLabel')}</span>
+          <div className="chips">
+            <button className={`tool ${keep === 'colors' ? 'on' : ''}`} onClick={() => setKeep('colors')} aria-pressed={keep === 'colors'} title={t('import.keepColorsHint')}>
+              {t('import.keepColors')}
+            </button>
+            <button className={`tool ${keep === 'detail' ? 'on' : ''}`} onClick={() => setKeep('detail')} aria-pressed={keep === 'detail'} title={t('import.keepDetailHint')}>
+              {t('import.keepDetail')}
+            </button>
+          </div>
+        </div>
+        {result.simplified && !tooMany && <p className="note warn">{t('import.simplified', { n: result.colors })}</p>}
         {result.reduced && !tooMany && <p className="note warn">{t('import.reduced', { n: result.colors })}</p>}
         {tooMany && <p className="note bad">{t('mint.tooDetailed')}</p>}
         <p className="note">{t('import.note', { size })}</p>
