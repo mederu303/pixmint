@@ -2,15 +2,32 @@
 // pixmint — mint のコストをチェーンごとに出す（ガス価格は 12 秒ごと・ETH の値段は 60 秒ごとに取り直す）
 //   合計 = gas × ガス価格 ＋（Base などの OP 系だけ）L1 データ費
 //   L1 データ費は GasPriceOracle の getL1FeeUpperBound（Fjord 以降）で上限を見積もる
-//   円 / ドルは Chainlink（Ethereum メインネット）の ETH/USD・JPY/USD。テスト ETH に価値は無いが、比べやすいようメインネットの値段で換算する
+//   円 / ドルは Chainlink（Ethereum メインネット）の ETH/USD・JPY/USD
+//   テストネットのガス価格は本物の相場とかけ離れている（Sepolia は 0.00000002 gwei ほど）ので、比べるときは
+//   テストネットで見積もった gas 量 × 対応するメインネットの今のガス価格（Sepolia → Ethereum・Base Sepolia → Base）で出す
 import { useEffect, useState } from 'react';
-import { createPublicClient, http, parseAbi, type PublicClient } from 'viem';
-import { mainnet } from 'viem/chains';
+import { createPublicClient, http, parseAbi, type Chain, type PublicClient } from 'viem';
+import { base, mainnet } from 'viem/chains';
 import { PIX_CHAINS } from './chains';
 import { PIXMINT_ABI, client } from './contract';
 
 export const OP_CHAINS = [8453, 84532];
 export const TESTNETS = [11155111, 84532, 31337];
+/** テストネット → ガス価格と L1 データ費を借りるメインネット（ローカルは相場が無いのでそのまま） */
+export const MAINNET_OF: Record<number, Chain> = { 11155111: mainnet, 84532: base };
+
+const mainnets = new Map<number, PublicClient>();
+function priceClient(chainId: number): PublicClient {
+  const m = MAINNET_OF[chainId];
+  if (!m) return client(chainId);
+  let c = mainnets.get(m.id);
+  if (!c) {
+    const rpc = m.id === 1 ? process.env.NEXT_PUBLIC_RPC_1 : process.env.NEXT_PUBLIC_RPC_8453;
+    c = createPublicClient({ chain: m, transport: http(rpc || undefined, { timeout: 8000 }) }) as PublicClient;
+    mainnets.set(m.id, c);
+  }
+  return c;
+}
 
 const GAS_ORACLE = '0x420000000000000000000000000000000000000F';
 const ORACLE_ABI = parseAbi(['function getL1FeeUpperBound(uint256 unsignedTxSize) view returns (uint256)']);
@@ -20,9 +37,11 @@ const JPY_USD = '0xBcE206caE7f0ec07b545EddE332A47C2F75bbeb3'; // 8 decimals（1 
 
 export interface ChainCost {
   gas: bigint | null;
-  gasPrice: bigint | null;
+  gasPrice: bigint | null; // 比べる用（テストネットはメインネットのガス価格）
   l1: bigint;
-  total: bigint | null;
+  total: bigint | null; // 比べる用の合計
+  ownGasPrice: bigint | null; // そのチェーンで実際に払うガス価格（テストネットでもそのまま）
+  ownTotal: bigint | null; // 実際にウォレットで払う額の目安
 }
 
 type Hex = `0x${string}`;
@@ -30,6 +49,7 @@ type Hex = `0x${string}`;
 /** 全チェーンの mint コスト。args が変わったら 0.5 秒待ってから gas を見積もり直す */
 export function useMintCosts(args: readonly [Hex, string, number] | null, value: bigint, account?: Hex) {
   const [gasPrice, setGasPrice] = useState<Record<number, bigint>>({});
+  const [ownPrice, setOwnPrice] = useState<Record<number, bigint>>({});
   const [gas, setGas] = useState<Record<number, bigint>>({});
   const [l1, setL1] = useState<Record<number, bigint>>({});
 
@@ -37,16 +57,26 @@ export function useMintCosts(args: readonly [Hex, string, number] | null, value:
     let live = true;
     const poll = () =>
       PIX_CHAINS.forEach((p) =>
-        client(p.chain.id)
+        priceClient(p.chain.id)
           .getGasPrice()
           .then((g) => live && setGasPrice((m) => ({ ...m, [p.chain.id]: g })))
           .catch(() => {}),
       );
+    const pollOwn = () =>
+      PIX_CHAINS.filter((p) => MAINNET_OF[p.chain.id]).forEach((p) =>
+        client(p.chain.id)
+          .getGasPrice()
+          .then((g) => live && setOwnPrice((m) => ({ ...m, [p.chain.id]: g })))
+          .catch(() => {}),
+      );
     poll();
+    pollOwn();
+    const timerOwn = setInterval(pollOwn, 12_000);
     const timer = setInterval(poll, 12_000);
     return () => {
       live = false;
       clearInterval(timer);
+      clearInterval(timerOwn);
     };
   }, []);
 
@@ -73,7 +103,7 @@ export function useMintCosts(args: readonly [Hex, string, number] | null, value:
           .then((g) => live && setGas((m) => ({ ...m, [p.chain.id]: g })))
           .catch(() => {});
         if (OP_CHAINS.includes(p.chain.id))
-          c.readContract({ address: GAS_ORACLE, abi: ORACLE_ABI, functionName: 'getL1FeeUpperBound', args: [BigInt(txSize)] })
+          priceClient(p.chain.id).readContract({ address: GAS_ORACLE, abi: ORACLE_ABI, functionName: 'getL1FeeUpperBound', args: [BigInt(txSize)] })
             .then((f) => live && setL1((m) => ({ ...m, [p.chain.id]: f })))
             .catch(() => {});
       }
@@ -92,7 +122,16 @@ export function useMintCosts(args: readonly [Hex, string, number] | null, value:
     const g = gas[id] ?? null;
     const gp = gasPrice[id] ?? null;
     const l = l1[id] ?? 0n;
-    costs[id] = { gas: g, gasPrice: gp, l1: l, total: g != null && gp != null ? g * gp + l + value : null };
+    // テストネットで実際に払うのはテストネットのガス価格（L1 データ費もテストネットではほぼ 0）
+    const op = MAINNET_OF[id] ? (ownPrice[id] ?? null) : gp;
+    costs[id] = {
+      gas: g,
+      gasPrice: gp,
+      l1: l,
+      total: g != null && gp != null ? g * gp + l + value : null,
+      ownGasPrice: op,
+      ownTotal: g != null && op != null ? g * op + (MAINNET_OF[id] ? 0n : l) + value : null,
+    };
   }
   return costs;
 }

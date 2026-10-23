@@ -62,8 +62,9 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
   const cur = costs[chainId];
   // 聞けないときだけ式で概算
   const gas = cur?.gas ?? (encoded.bytes ? BigInt(estimateMintGas(encoded.bytes.length, titleBytes)) : 0n);
-  const gasPrice = cur?.gasPrice ?? null;
-  const fee = gasPrice != null ? gas * gasPrice + (cur?.l1 ?? 0n) : null;
+  // ここは実際にウォレットで払う額（テストネットならテストネットのガス価格）。下の比べる欄はメインネット換算
+  const gasPrice = cur?.ownGasPrice ?? null;
+  const fee = cur?.ownTotal != null ? cur.ownTotal - mintPrice : gasPrice != null ? gas * gasPrice : null;
   const hint = useMemo(() => colorHint(grid, bg, encoded.bytes?.length ?? 0), [grid, bg, encoded.bytes]);
 
   async function mint() {
