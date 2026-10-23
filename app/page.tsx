@@ -1,9 +1,11 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PixCanvas, Swatches, ToolIcon } from '../components/Editor';
+import { ImportDialog } from '../components/ImportDialog';
+import { loadImage } from '../lib/convert';
 import { MintPanel } from '../components/MintPanel';
 import { useI18n } from '../lib/i18n';
-import { ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, type PixGrid, type PixTool } from '../lib/pix';
+import { ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 const SAVE_KEY = 'pixmint-doc-v1';
 const PAL_KEY = 'pixmint-palettes-v1';
@@ -12,6 +14,7 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'eraser', key: 'E' },
   { id: 'fill', key: 'G' },
   { id: 'picker', key: 'I' },
+  { id: 'select', key: 'M' },
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
 const clonePalettes = () => Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, [...v]]));
@@ -28,6 +31,15 @@ export default function Studio() {
   const [palettes, setPalettes] = useState<Record<string, string[]>>(clonePalettes);
   const [swatch, setSwatch] = useState<number | null>(null);
   const history = useRef<PixGrid[]>([]);
+  // 選択・コピー＆ペースト。floating は確定前の絵（動かせる）。clip はこのページの中のクリップボード
+  const [sel, setSel] = useState<PixRect | null>(null);
+  const [floating, setFloating] = useState<PixFloat | null>(null);
+  const clip = useRef<PixGrid | null>(null);
+  const pasteFallback = useRef(0);
+  // 画像 → ドット絵の確認画面
+  const [importing, setImporting] = useState<ImageBitmap | null>(null);
+  const [dropping, setDropping] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [, bump] = useState(0);
   const loaded = useRef(false);
 
@@ -81,6 +93,8 @@ export default function Studio() {
   }, [grid]);
 
   const undo = () => {
+    // 浮いている絵は、持ち上げた／貼り付けた時点の履歴に戻すと消える
+    setFloating(null);
     const prev = history.current.pop();
     if (prev) setGrid(prev);
     bump((n) => n + 1);
@@ -104,23 +118,143 @@ export default function Studio() {
 
   const clear = () => {
     beginStroke();
+    setFloating(null);
+    setSel(null);
     setGrid(newGrid(grid.length));
+  };
+
+  // ── 選択・コピー＆ペースト ──
+  // 確定したら選択も外す（続けてドラッグしたときに、置いた絵ごと動いてしまわないように）
+  const commit = useCallback(() => {
+    if (!floating) return;
+    setGrid((g) => stamp(g, floating));
+    setSel(null);
+    setFloating(null);
+  }, [floating]);
+  const lift = () => {
+    if (!sel) return;
+    beginStroke();
+    setFloating({ ...sel, cells: cutOut(grid, sel) });
+    setGrid(clearRect(grid, sel));
+    setSel(null);
+  };
+  const copy = () => {
+    if (floating) clip.current = floating.cells.map((r) => [...r]);
+    else if (sel) clip.current = cutOut(grid, sel);
+  };
+  const remove = () => {
+    if (floating) {
+      setFloating(null); // 持ち上げた時点で元の場所は消えている
+    } else if (sel) {
+      beginStroke();
+      setGrid(clearRect(grid, sel));
+    }
+  };
+  const place = (cells: PixGrid) => {
+    if (floating) commit();
+    beginStroke();
+    const n = grid.length, h = cells.length, w = cells[0]?.length ?? 0;
+    // 選択範囲があればその左上、無ければ真ん中に置く
+    const r = sel ? sel.r : Math.floor((n - h) / 2), c = sel ? sel.c : Math.floor((n - w) / 2);
+    setFloating({ r, c, h, w, cells });
+    setSel(null);
+    setTool('select');
+  };
+  const nudge = (dr: number, dc: number) => {
+    if (floating) setFloating({ ...floating, r: floating.r + dr, c: floating.c + dc });
+    else if (sel) lift();
+  };
+  // 選択ツールから離れたら確定する
+  useEffect(() => {
+    if (tool !== 'select') commit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool]);
+
+  const openImage = async (file: Blob | null | undefined) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    try {
+      setImporting(await loadImage(file));
+    } catch {}
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      if (importing) return;
+      const mod = e.metaKey || e.ctrlKey;
+      const k = e.key.toLowerCase();
+      if (mod && k === 'z') {
         e.preventDefault();
         undo();
+        return;
+      }
+      if (mod && (k === 'c' || k === 'x') && (sel || floating)) {
+        e.preventDefault();
+        copy();
+        if (k === 'x') remove();
+        return;
+      }
+      if (mod && k === 'v') {
+        // 本来は paste イベントで受ける（画像も読める）。paste が来ない環境のために、少し待って来なければページ内のコピーを貼る
+        pasteFallback.current = window.setTimeout(() => {
+          pasteFallback.current = 0;
+          if (clip.current) place(clip.current.map((r) => [...r]));
+        }, 80);
+        return;
+      }
+      if (mod && k === 'a') {
+        e.preventDefault();
+        commit();
+        setTool('select');
+        setSel({ r: 0, c: 0, h: grid.length, w: grid.length });
+        return;
+      }
+      if ((k === 'delete' || k === 'backspace') && (sel || floating)) {
+        e.preventDefault();
+        remove();
+        return;
+      }
+      if (k === 'enter' && floating) {
+        e.preventDefault();
+        commit();
+        return;
+      }
+      if (k === 'escape') {
+        if (floating) undo(); // 持ち上げる／貼り付ける前に戻す
+        setSel(null);
+        return;
+      }
+      const arrow = { arrowup: [-1, 0], arrowdown: [1, 0], arrowleft: [0, -1], arrowright: [0, 1] }[k];
+      if (arrow && (sel || floating) && tool === 'select') {
+        e.preventDefault();
+        nudge(arrow[0], arrow[1]);
         return;
       }
       const tl = TOOLS.find((x) => x.key.toLowerCase() === e.key.toLowerCase());
       if (tl && !e.metaKey && !e.ctrlKey) setTool(tl.id);
     };
+    // ⌘V: クリップボードに画像があれば読み込み画面へ。無ければこのページでコピーした絵を貼る
+    const onPaste = (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      clearTimeout(pasteFallback.current);
+      pasteFallback.current = 0;
+      const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'));
+      if (file) {
+        e.preventDefault();
+        openImage(file);
+      } else if (clip.current) {
+        e.preventDefault();
+        place(clip.current.map((r) => [...r]));
+      }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('paste', onPaste);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('paste', onPaste);
+    };
   });
 
   const toolLabel = (id: string) => t(`tool.${id}` as 'tool.pen');
@@ -160,6 +294,20 @@ export default function Studio() {
             <ToolIcon name="clear" />
             <span>{t('tool.clear')}</span>
           </button>
+          <button className="tb" onClick={() => fileRef.current?.click()} title={t('tool.importHint')}>
+            <ToolIcon name="import" />
+            <span>{t('tool.import')}</span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              openImage(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
         </div>
 
         <div className="sect">
@@ -246,7 +394,21 @@ export default function Studio() {
         </div>
       </aside>
 
-      <div className="canvas-area">
+      <div
+        className={`canvas-area ${dropping ? 'dropping' : ''}`}
+        onDragOver={(e) => {
+          if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) {
+            e.preventDefault();
+            setDropping(true);
+          }
+        }}
+        onDragLeave={() => setDropping(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDropping(false);
+          openImage(e.dataTransfer.files[0]);
+        }}
+      >
         <PixCanvas
           grid={grid}
           bg={bg}
@@ -260,8 +422,27 @@ export default function Studio() {
             setSwatch(i >= 0 ? i : null);
             setTool('pen');
           }}
+          sel={sel}
+          floating={floating}
+          onSelect={setSel}
+          onLift={lift}
+          onMoveFloating={(r, c) => setFloating((f) => (f ? { ...f, r, c } : f))}
+          onCommit={commit}
         />
       </div>
+      {importing && (
+        <ImportDialog
+          image={importing}
+          size={grid.length}
+          bg={bg}
+          palette={palettes[palette]}
+          onCancel={() => setImporting(null)}
+          onApply={(g) => {
+            setImporting(null);
+            place(g); // 浮かせて置くので、位置を動かしてから Enter で確定できる
+          }}
+        />
+      )}
 
       <MintPanel grid={grid} bg={bg} />
     </div>

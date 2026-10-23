@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { PALETTES, floodFill, lineCells, type PixGrid, type PixTool } from '../lib/pix';
+import { PALETTES, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 interface Props {
   grid: PixGrid;
@@ -10,12 +10,21 @@ interface Props {
   onChange: (next: PixGrid) => void;
   onBeginStroke: () => void;
   onPick: (color: string) => void;
+  // 選択ツール
+  sel?: PixRect | null;
+  floating?: PixFloat | null;
+  onSelect?: (s: PixRect | null) => void;
+  onLift?: () => void; // 選択範囲を持ち上げて浮かせる
+  onMoveFloating?: (r: number, c: number) => void;
+  onCommit?: () => void; // 浮いている絵を下ろす
 }
 
 /** キャンバス。1マス = 1画素で描いて CSS で拡大する（原本 drawPixCanvas と同じ） */
-export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick }: Props) {
+export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ last: [number, number]; work: PixGrid } | null>(null);
+  // 選択ツールのドラッグ: 'select' = 範囲を作る / 'move' = 浮いている絵を動かす（つかんだ位置のずれを持つ）
+  const sdrag = useRef<{ kind: 'select'; r0: number; c0: number } | { kind: 'move'; dr: number; dc: number } | null>(null);
   const size = grid.length;
 
   useEffect(() => {
@@ -34,7 +43,18 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
           ctx.fillRect(c, r, 1, 1);
         }
       }
-  }, [grid, bg, size]);
+    if (floating)
+      floating.cells.forEach((row, i) =>
+        row.forEach((v, j) => {
+          if (!v) return;
+          ctx.fillStyle = v;
+          ctx.fillRect(floating.c + j, floating.r + i, 1, 1);
+        }),
+      );
+  }, [grid, bg, size, floating]);
+
+  const inside = (s: PixRect | null | undefined, r: number, c: number) =>
+    !!s && r >= s.r && r < s.r + s.h && c >= s.c && c < s.c + s.w;
 
   const cellAt = (e: React.PointerEvent): [number, number] => {
     const rect = ref.current!.getBoundingClientRect();
@@ -50,6 +70,20 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   const down = (e: React.PointerEvent) => {
     e.preventDefault();
     const [r, c] = cellAt(e);
+    if (tool === 'select') {
+      ref.current!.setPointerCapture(e.pointerId);
+      if (floating && inside(floating, r, c)) {
+        sdrag.current = { kind: 'move', dr: r - floating.r, dc: c - floating.c };
+      } else if (!floating && sel && inside(sel, r, c)) {
+        onLift?.();
+        sdrag.current = { kind: 'move', dr: r - sel.r, dc: c - sel.c };
+      } else {
+        if (floating) onCommit?.();
+        sdrag.current = { kind: 'select', r0: r, c0: c };
+        onSelect?.({ r, c, h: 1, w: 1 });
+      }
+      return;
+    }
     if (tool === 'picker') {
       onPick(grid[r][c] ?? bg);
       return;
@@ -68,6 +102,19 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   };
 
   const move = (e: React.PointerEvent) => {
+    const sd = sdrag.current;
+    if (sd) {
+      // 動かすときははみ出してもよい（下ろすときに切れる）。範囲はキャンバスの中だけ
+      const rect = ref.current!.getBoundingClientRect();
+      const rr = Math.floor(((e.clientY - rect.top) / rect.height) * size);
+      const cc = Math.floor(((e.clientX - rect.left) / rect.width) * size);
+      if (sd.kind === 'move') onMoveFloating?.(rr - sd.dr, cc - sd.dc);
+      else {
+        const [r, c] = cellAt(e);
+        onSelect?.({ r: Math.min(r, sd.r0), c: Math.min(c, sd.c0), h: Math.abs(r - sd.r0) + 1, w: Math.abs(c - sd.c0) + 1 });
+      }
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const [r, c] = cellAt(e);
@@ -79,11 +126,26 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
 
   const up = () => {
     drag.current = null;
+    sdrag.current = null;
   };
+
+  const box = floating ?? (tool === 'select' ? sel : null);
 
   return (
     <div className="canvas-wrap">
       <canvas ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      {box && (
+        <div
+          className={`sel-box ${floating ? 'floating' : ''}`}
+          style={{
+            left: `${(box.c / size) * 100}%`,
+            top: `${(box.r / size) * 100}%`,
+            width: `${(box.w / size) * 100}%`,
+            height: `${(box.h / size) * 100}%`,
+          }}
+          aria-hidden
+        />
+      )}
       {size % 2 === 1 && (
         // 奇数サイズのときは真ん中のマスに十字のガイド（表示だけ。絵には入らない）
         <div className="center-guide" style={{ ['--cell' as string]: `${100 / size}%` }} aria-hidden />
@@ -118,6 +180,8 @@ const ICONS: Record<string, string> = {
   picker: 'M14 4l6 6M17 7l-9 9-4 4v-4l9-9M12 6l6 6',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
   clear: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  select: 'M4 4h3M10 4h4M17 4h3v3M20 10v4M20 17v3h-3M14 20h-4M7 20H4v-3M4 14v-4M4 7V4',
+  import: 'M4 16l4-4 3 3 5-5 4 4M4 4h16v16H4zM9 8.5a1 1 0 100 .01',
   download: 'M12 4v11M7 10l5 5 5-5M5 19h14',
 };
 

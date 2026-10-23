@@ -5,7 +5,42 @@
 // pixmint は1レイヤー＋背景色（mint するのは合成後の1枚なので、まずは単純に）。
 
 export type PixGrid = (string | null)[][];
-export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker';
+export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker' | 'select';
+
+/** 選択範囲（左上の行・列と高さ・幅） */
+export interface PixRect {
+  r: number;
+  c: number;
+  h: number;
+  w: number;
+}
+/** 持ち上げた／貼り付けた絵（確定するまでキャンバスの上に浮いている） */
+export interface PixFloat extends PixRect {
+  cells: PixGrid; // h×w。null は透明（下の絵を残す）
+}
+
+export function cutOut(grid: PixGrid, s: PixRect): PixGrid {
+  return Array.from({ length: s.h }, (_, i) => grid[s.r + i].slice(s.c, s.c + s.w));
+}
+
+/** 浮いている絵を下ろす（はみ出した分は捨てる・透明は下を残す） */
+export function stamp(grid: PixGrid, f: PixFloat): PixGrid {
+  const out = cloneGrid(grid);
+  const n = grid.length;
+  f.cells.forEach((row, i) =>
+    row.forEach((v, j) => {
+      const r = f.r + i, c = f.c + j;
+      if (v && r >= 0 && c >= 0 && r < n && c < n) out[r][c] = v;
+    }),
+  );
+  return out;
+}
+
+export function clearRect(grid: PixGrid, s: PixRect): PixGrid {
+  const out = cloneGrid(grid);
+  for (let i = 0; i < s.h; i++) for (let j = 0; j < s.w; j++) out[s.r + i][s.c + j] = null;
+  return out;
+}
 
 export function newGrid(size: number): PixGrid {
   return Array.from({ length: size }, () => Array<string | null>(size).fill(null));
