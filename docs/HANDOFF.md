@@ -55,10 +55,11 @@ npm run dev              # http://localhost:3333
 ## テストネット（2026-10-23）
 | | アドレス | deploy tx |
 |---|---|---|
-| Sepolia (11155111) | `0x87259aaf2bb8bbd789d9306be55db10b8096a5d0` | `0xcf62a8e0…5b32` |
-| Base Sepolia (84532) | `0xb37080c5c4cad103ab7f800b3eb81f83c437a3e0` | `0xae2c545d…de74` |
+| Sepolia (11155111) | `0x2bcdf0a8b81022b6ef0273f10764d7065f800a03` | `0x690d654d…41d3` |
+| Base Sepolia (84532) | `0x14c3b1972ecb84069399786893dbb1c949ae49b1` | `0xb470a667…cc56` |
 
-- 上は v2（2026-10-23 セキュリティ修正後: 表示名の制限・UTF-8 の検証・Ownable2Step）。v1（`0xc8c4…7dd8`。両チェーン）は使わない
+- 上は **v3**（2026-10-23）: v2 のセキュリティ修正（表示名の制限・UTF-8 の検証・Ownable2Step）＋ **MAX_RUNS 2,048**
+- 使わない: v2（Sepolia `0x8725…a5d0`・Base Sepolia `0xb370…a3e0`）、v1（両チェーン `0xc8c4…7dd8`）
 
 - owner / deployer: `0xC9DE84e5249C318D96DDBFF2f63ded08ED480C08`（鍵は `.env.deploy`。git に入らない）
 - デプロイ: `npm run deploy -- sepolia` / `base-sepolia`（メインネットは `ALLOW_MAINNET=1` が要る）。事前確認は `node scripts/check-deploy.mjs`
