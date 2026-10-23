@@ -336,3 +336,6 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
 /* 選んでいる色が暗いときは、まわりの光る枠も白っぽく（緑だと暗い色に溶けて見えにくい） */
 .swatches button.on.dark { outline-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 10px rgba(255, 255, 255, 0.35); }
 .chip.big.dark { border-color: rgba(255, 255, 255, 0.85); box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+
+/* Option を押している間の対称の軸 */
+.sym-axis { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.55); pointer-events: none; }

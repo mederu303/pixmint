@@ -222,7 +222,15 @@ export default function Studio() {
     if (!continuing) beginStroke(); // ドラッグで続けて押した分は、戻すとき 1 回にまとめる
     const sg = stampFor(m);
     const [r0, c0] = stampOrigin([r, c], sg);
-    setGrid((g) => stamp(g, { r: r0, c: c0, h: sg.length, w: sg[0].length, cells: sg }));
+    setGrid((g) => {
+      let out = stamp(g, { r: r0, c: c0, h: sg.length, w: sg[0].length, cells: sg });
+      // Option を押しながら: 左右対称の位置に、反転したスタンプをもう 1 つ
+      if (m.sym) {
+        const mg = flipG(sg);
+        out = stamp(out, { r: r0, c: g.length - c0 - sg[0].length, h: mg.length, w: mg[0].length, cells: mg });
+      }
+      return out;
+    });
     // 続けて押すときは音を間引く（うるさくならないように）
     const now = performance.now();
     if (!continuing || now - lastStampSound.current > 120) {

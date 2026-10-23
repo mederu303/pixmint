@@ -28,8 +28,9 @@ interface Props {
 export interface StampMods {
   flip: boolean; // Ctrl を押しながら
   big: boolean; // Shift を押しながら
+  sym: boolean; // Option（Alt）を押しながら = 左右対称にもう 1 つ
 }
-const modsOf = (e: { ctrlKey: boolean; shiftKey: boolean }): StampMods => ({ flip: e.ctrlKey, big: e.shiftKey });
+const modsOf = (e: { ctrlKey: boolean; shiftKey: boolean; altKey: boolean }): StampMods => ({ flip: e.ctrlKey, big: e.shiftKey, sym: e.altKey });
 
 /** キャンバス。1マス = 1画素で描いて CSS で拡大する（原本 drawPixCanvas と同じ） */
 export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, stampFor, onStamp }: Props) {
@@ -41,18 +42,20 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   const [hover, setHover] = useState<[number, number] | null>(null);
   // スタンプをブラシのようにドラッグで続けて押す。前に押した位置から、スタンプの大きさの半分離れたら次を押す
   const stampDrag = useRef<[number, number] | null>(null);
-  const [mods, setMods] = useState<StampMods>({ flip: false, big: false });
-  // キーを押した・離しただけでも下見を変える
+  const [mods, setMods] = useState<StampMods>({ flip: false, big: false, sym: false });
+  // キーを押した・離しただけでも下見と対称の線を変える
   useEffect(() => {
-    if (tool !== 'stamp') return;
-    const on = (e: KeyboardEvent) => setMods((m) => (m.flip === e.ctrlKey && m.big === e.shiftKey ? m : modsOf(e)));
+    const on = (e: KeyboardEvent) =>
+      setMods((m) => (m.flip === e.ctrlKey && m.big === e.shiftKey && m.sym === e.altKey ? m : modsOf(e)));
     window.addEventListener('keydown', on);
     window.addEventListener('keyup', on);
     return () => {
       window.removeEventListener('keydown', on);
       window.removeEventListener('keyup', on);
     };
-  }, [tool]);
+  }, []);
+  // ペン・消しゴムで最後に塗った位置（⌘ + クリックでここから直線を引く）
+  const lastPoint = useRef<[number, number] | null>(null);
   const shown = tool === 'stamp' && stampFor ? stampFor(mods) : stamp;
 
   useEffect(() => {
@@ -104,8 +107,11 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     return [Math.min(size - 1, Math.max(0, r)), Math.min(size - 1, Math.max(0, c))];
   };
 
-  const paint = (work: PixGrid, r: number, c: number) => {
-    work[r][c] = tool === 'eraser' ? null : color;
+  // sym = Option を押しながら: 左右対称の位置にも塗る
+  const paint = (work: PixGrid, r: number, c: number, sym = false) => {
+    const v = tool === 'eraser' ? null : color;
+    work[r][c] = v;
+    if (sym) work[r][size - 1 - c] = v;
   };
 
   const down = (e: React.PointerEvent) => {
@@ -146,8 +152,13 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       return;
     }
     ref.current!.setPointerCapture(e.pointerId);
-    paint(work, r, c);
+    const sym = e.altKey;
+    const from = lastPoint.current;
+    // ⌘（Windows は Ctrl）+ クリック: 前に塗った位置からまっすぐ線を引く
+    if ((e.metaKey || e.ctrlKey) && from) for (const [rr, cc] of lineCells(from[0], from[1], r, c)) paint(work, rr, cc, sym);
+    else paint(work, r, c, sym);
     drag.current = { last: [r, c], work };
+    lastPoint.current = [r, c];
     onChange(work.map((row) => [...row]));
   };
 
@@ -184,8 +195,9 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     if (!d) return;
     const [r, c] = cellAt(e);
     if (r === d.last[0] && c === d.last[1]) return;
-    for (const [rr, cc] of lineCells(d.last[0], d.last[1], r, c)) paint(d.work, rr, cc);
+    for (const [rr, cc] of lineCells(d.last[0], d.last[1], r, c)) paint(d.work, rr, cc, e.altKey);
     d.last = [r, c];
+    lastPoint.current = [r, c];
     onChange(d.work.map((row) => [...row]));
   };
 
@@ -220,6 +232,10 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
           }}
           aria-hidden
         />
+      )}
+      {mods.sym && (tool === 'pen' || tool === 'eraser' || tool === 'stamp') && (
+        // Option を押している間: 対称の軸（真ん中の縦線）
+        <div className="sym-axis" aria-hidden />
       )}
       {size % 2 === 1 && (
         // 奇数サイズのときは真ん中のマスに十字のガイド（表示だけ。絵には入らない）
