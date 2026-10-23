@@ -6,6 +6,8 @@ import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { Name } from './Name';
 import { TEST_WALLETS, TEST_WALLET_KEY } from '../app/providers';
 import { LangToggle, useI18n } from '../lib/i18n';
+import { PIX_CHAINS } from '../lib/chains';
+import { TESTNETS } from '../lib/cost';
 
 export function Header() {
   const path = usePathname();
@@ -29,6 +31,17 @@ export function Header() {
       <Wallet />
       <LangToggle />
     </header>
+  );
+}
+
+/** テストネットだけで動いているときの帯（本物のお金ではないことを先に伝える） */
+export function TestnetBanner() {
+  const { t } = useI18n();
+  if (!PIX_CHAINS.length || PIX_CHAINS.some((p) => !TESTNETS.includes(p.chain.id))) return null;
+  return (
+    <div className="testnet-banner" role="note">
+      {t('banner.testnet')}
+    </div>
   );
 }
 

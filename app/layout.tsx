@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from './providers';
-import { Footer, Header } from '../components/Header';
+import { Footer, Header, TestnetBanner } from '../components/Header';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <Providers>
+          <TestnetBanner />
           <Header />
           <main>{children}</main>
           <Footer />

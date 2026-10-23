@@ -108,6 +108,8 @@ const en = {
   'work.notForSale': 'Not for sale',
   'work.note': 'The image lives inside the contract, which also renders the SVG. No IPFS, no server.',
 
+  'banner.testnet': 'TESTNET — pixmint is running on Sepolia and Base Sepolia. Test ETH has no value; works minted here are for trying it out.',
+
   'me.title': 'Display name',
   'me.desc':
     'Shown instead of your address on works and lists. You can change it any time (your works stay the same). Without one, we show your .eth, then Basename, then the address.',
@@ -228,6 +230,8 @@ const ja: Record<Key, string> = {
   'work.list': '出品',
   'work.notForSale': '販売していません',
   'work.note': '絵はコントラクトの中にあり、SVG もコントラクトが組み立てます。IPFS やサーバーには依存していません。',
+
+  'banner.testnet': 'テストネット — いまは Sepolia と Base Sepolia で動いています。テスト用の ETH に価値はなく、ここで mint した作品はお試し用です。',
 
   'me.title': '表示名',
   'me.desc':
