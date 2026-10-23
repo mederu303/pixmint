@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { sfx } from '../lib/sound';
-import { PALETTES, isDark, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
+import { PALETTES, drawShape, isDark, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 interface Props {
   grid: PixGrid;
@@ -22,7 +22,8 @@ interface Props {
   stamp?: PixGrid | null;
   /** 押すときのキー（Ctrl = 左右反転・Shift = 2 倍）を当てたスタンプ。下見にも使う */
   stampFor?: (mods: StampMods) => PixGrid;
-  onStamp?: (r: number, c: number, continuing: boolean, mods: StampMods) => void; // continuing = ドラッグ中の 2 つ目以降（戻すときは 1 回にまとめる）
+  onStamp?: (r: number, c: number, continuing: boolean, mods: StampMods) => void;
+  shapeFill?: boolean; // 四角・楕円を塗りつぶすか // continuing = ドラッグ中の 2 つ目以降（戻すときは 1 回にまとめる）
 }
 
 export interface StampMods {
@@ -33,7 +34,7 @@ export interface StampMods {
 const modsOf = (e: { ctrlKey: boolean; shiftKey: boolean; altKey: boolean }): StampMods => ({ flip: e.ctrlKey, big: e.shiftKey, sym: e.altKey });
 
 /** キャンバス。1マス = 1画素で描いて CSS で拡大する（原本 drawPixCanvas と同じ） */
-export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, stampFor, onStamp }: Props) {
+export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, stampFor, onStamp, shapeFill = false }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ last: [number, number]; work: PixGrid } | null>(null);
   // 選択ツールのドラッグ: 'select' = 範囲を作る / 'move' = 浮いている絵を動かす（つかんだ位置のずれを持つ）
@@ -54,6 +55,22 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       window.removeEventListener('keyup', on);
     };
   }, []);
+  // 四角・楕円: 押した位置と、押す前の絵（動かすたびに描き直す）
+  const shapeDrag = useRef<{ r0: number; c0: number; base: PixGrid } | null>(null);
+  const drawShapeTo = (r: number, c: number, square: boolean) => {
+    const d = shapeDrag.current;
+    if (!d || (tool !== 'box' && tool !== 'oval')) return;
+    let r1 = r, c1 = c;
+    if (square) {
+      // Shift: 正方形・正円（短い方ではなく長い方に合わせる）
+      const k = Math.max(Math.abs(r - d.r0), Math.abs(c - d.c0));
+      r1 = d.r0 + (r >= d.r0 ? k : -k);
+      c1 = d.c0 + (c >= d.c0 ? k : -k);
+    }
+    const w = d.base.map((row) => [...row]);
+    drawShape(w, tool, d.r0, d.c0, r1, c1, color, shapeFill);
+    onChange(w);
+  };
   // ペン・消しゴムで最後に塗った位置（⌘ + クリックでここから直線を引く）
   const lastPoint = useRef<[number, number] | null>(null);
   const shown = tool === 'stamp' && stampFor ? stampFor(mods) : stamp;
@@ -145,6 +162,12 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       stampDrag.current = [r, c];
       return;
     }
+    if (tool === 'box' || tool === 'oval') {
+      ref.current!.setPointerCapture(e.pointerId);
+      shapeDrag.current = { r0: r, c0: c, base: work };
+      drawShapeTo(r, c, e.shiftKey);
+      return;
+    }
     if (tool === 'fill') {
       floodFill(work, r, c, color);
       onChange(work);
@@ -191,6 +214,11 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       }
       return;
     }
+    if (shapeDrag.current) {
+      const [r, c] = cellAt(e);
+      drawShapeTo(r, c, e.shiftKey);
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const [r, c] = cellAt(e);
@@ -205,6 +233,7 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     drag.current = null;
     sdrag.current = null;
     stampDrag.current = null;
+    shapeDrag.current = null;
   };
 
   const box = floating ?? (tool === 'select' ? sel : null);
@@ -301,6 +330,8 @@ const ICONS: Record<string, string> = {
   select: 'M4 4h3M10 4h4M17 4h3v3M20 10v4M20 17v3h-3M14 20h-4M7 20H4v-3M4 14v-4M4 7V4',
   import: 'M4 16l4-4 3 3 5-5 4 4M4 4h16v16H4zM9 8.5a1 1 0 100 .01',
   stamp: 'M9 3h6v6l3 3v3H6v-3l3-3zM5 19h14M8 21h8',
+  box: 'M4 5h16v14H4z',
+  oval: 'M12 5c4.4 0 8 3.1 8 7s-3.6 7-8 7-8-3.1-8-7 3.6-7 8-7z',
   sound: 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11',
   mute: 'M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6',
   download: 'M12 4v11M7 10l5 5 5-5M5 19h14',

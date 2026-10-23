@@ -5,7 +5,7 @@
 // pixmint は1レイヤー＋背景色（mint するのは合成後の1枚なので、まずは単純に）。
 
 export type PixGrid = (string | null)[][];
-export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker' | 'select' | 'stamp';
+export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker' | 'select' | 'stamp' | 'box' | 'oval';
 
 /** 選択範囲（左上の行・列と高さ・幅） */
 export interface PixRect {
@@ -193,4 +193,26 @@ export function isDark(hex: string): boolean {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) return false;
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3;
+}
+
+/**
+ * 四角・楕円をマス目に描く（r0,c0 〜 r1,c1 の箱に収める）。fill = 塗りつぶし / false = 輪郭だけ（1 マス幅）
+ */
+export function drawShape(grid: PixGrid, kind: 'box' | 'oval', r0: number, c0: number, r1: number, c1: number, color: string | null, fill: boolean) {
+  const n = grid.length;
+  const top = Math.min(r0, r1), bottom = Math.max(r0, r1), left = Math.min(c0, c1), right = Math.max(c0, c1);
+  const inside = (r: number, c: number) => {
+    if (r < top || r > bottom || c < left || c > right) return false;
+    if (kind === 'box') return true;
+    // 楕円: マスの中心が楕円の中にあるか
+    const cy = (top + bottom) / 2, cx = (left + right) / 2;
+    const ry = (bottom - top + 1) / 2, rx = (right - left + 1) / 2;
+    return ((r - cy) / ry) ** 2 + ((c - cx) / rx) ** 2 <= 1;
+  };
+  for (let r = Math.max(0, top); r <= Math.min(n - 1, bottom); r++)
+    for (let c = Math.max(0, left); c <= Math.min(n - 1, right); c++) {
+      if (!inside(r, c)) continue;
+      const edge = !inside(r - 1, c) || !inside(r + 1, c) || !inside(r, c - 1) || !inside(r, c + 1);
+      if (fill || edge) grid[r][c] = color;
+    }
 }

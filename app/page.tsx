@@ -18,6 +18,8 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'picker', key: 'I' },
   { id: 'select', key: 'M' },
   { id: 'stamp', key: 'T' }, // S は PNG 保存
+  { id: 'box', key: 'U' },
+  { id: 'oval', key: 'O' },
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -47,6 +49,7 @@ export default function Studio() {
   const [stampFlip, setStampFlip] = useState(false);
   const [stampScale, setStampScale] = useState(1);
   const [sound, setSoundState] = useState(true);
+  const [shapeFill, setShapeFill] = useState(false); // 四角・楕円を塗りつぶすか
   useEffect(() => setSoundState(soundOn()), []);
   // 画像 → ドット絵の確認画面
   const [importing, setImporting] = useState<LoadedImage | null>(null);
@@ -401,6 +404,19 @@ export default function Studio() {
           />
         </div>
 
+        {(tool === 'box' || tool === 'oval') && (
+          <div className="sect stamps">
+            <div className="shape-opts">
+              <button className={`tool ${!shapeFill ? 'on' : ''}`} onClick={() => setShapeFill(false)} aria-pressed={!shapeFill}>
+                {t('shape.outline')}
+              </button>
+              <button className={`tool ${shapeFill ? 'on' : ''}`} onClick={() => setShapeFill(true)} aria-pressed={shapeFill}>
+                {t('shape.filled')}
+              </button>
+            </div>
+            <span className="note">{t('shape.hint')}</span>
+          </div>
+        )}
         {tool === 'stamp' && (
           <div className="sect stamps">
             {/* 今の色が暗いと、染まった部分と輪郭が暗い枠に溶けるので、見本だけ明るい下地にする */}
@@ -568,6 +584,7 @@ export default function Studio() {
           onCommit={commit}
           stamp={stampG}
           stampFor={stampFor}
+          shapeFill={shapeFill}
           onStamp={doStamp}
         />
       </div>

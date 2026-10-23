@@ -339,3 +339,7 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
 
 /* Option を押している間の対称の軸 */
 .sym-axis { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.55); pointer-events: none; }
+
+/* 四角・丸の 線 / 塗り（2 列でいっぱいに） */
+.shape-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.shape-opts .tool { width: 100%; padding: 7px 0; text-align: center; }
