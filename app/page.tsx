@@ -4,7 +4,7 @@ import { PixCanvas, StampThumb, Swatches, ToolIcon, stampOrigin, type StampMods 
 import { STAMPS, flip as flipG, rotate as rotateG, scale as scaleG, stampGrid } from '../lib/stamps';
 import { setSound, sfx, soundOn } from '../lib/sound';
 import { ImportDialog } from '../components/ImportDialog';
-import { loadImage, type LoadedImage } from '../lib/convert';
+import { fitGrid, loadImage, type LoadedImage } from '../lib/convert';
 import { MintPanel } from '../components/MintPanel';
 import { useI18n } from '../lib/i18n';
 import { isDark, ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
@@ -577,7 +577,17 @@ export default function Studio() {
         />
       )}
 
-      <MintPanel grid={shown} bg={bg} />
+      <MintPanel
+        grid={shown}
+        bg={bg}
+        onFit={() => {
+          // 浮いている絵も含めて、見えているとおりの絵を収める（⌘Z で戻せる）
+          if (floating) commit();
+          beginStroke();
+          setGrid(fitGrid(shown, bg));
+          sfx.fill();
+        }}
+      />
     </div>
   );
 }

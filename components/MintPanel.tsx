@@ -10,6 +10,7 @@ import { LABEL, PIX_CHAINS, pixChain } from '../lib/chains';
 import { PIXMINT_ABI, client, estimateMintGas, findSameArt, readNum, svgUrl } from '../lib/contract';
 import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cost';
 import { flatten, type PixGrid } from '../lib/pix';
+import { countRuns } from '../lib/convert';
 import { useI18n } from '../lib/i18n';
 
 const ROYALTIES = [0, 250, 500, 750, 1000];
@@ -17,7 +18,7 @@ const TITLE_MAX = 96;
 const enc = new TextEncoder();
 const toHex = (b: Uint8Array) => ('0x' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')) as `0x${string}`;
 
-export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
+export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFit?: () => void }) {
   const { t, lang } = useI18n();
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -41,6 +42,9 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
       return { bytes: null, info: null, svg: null, error: (e as Error).message };
     }
   }, [grid, bg]);
+
+  // 上限を超えているときのラン数（encodePxm は上限で止まるので数え直す）
+  const overRuns = useMemo(() => (encoded.bytes ? 0 : countRuns(grid, bg)), [encoded.bytes, grid, bg]);
 
   const titleBytes = enc.encode(title).length;
   const titleBad = titleBytes > TITLE_MAX || /[\u0000-\u001f\u007f]/.test(title);
@@ -130,7 +134,18 @@ export function MintPanel({ grid, bg }: { grid: PixGrid; bg: string }) {
         {encoded.svg ? (
           <img className="preview" src={svgUrl(encoded.svg)} alt="preview" />
         ) : (
-          <p className="note bad">{t('mint.tooDetailed')}</p>
+          <div className="stack fit" style={{ gap: 10 }}>
+            <p className="note bad">{t('mint.tooDetailed')}</p>
+            <p className="note">
+              {t('mint.runs')}: <b className="bad">{overRuns.toLocaleString()}</b> / {PXM_MAX_RUNS.toLocaleString()}
+            </p>
+            {onFit && (
+              <button onClick={onFit} title={t('mint.fitHint')}>
+                {t('mint.fit')}
+              </button>
+            )}
+            <p className="note">{t('mint.fitHint')}</p>
+          </div>
         )}
         </div>
         {encoded.info && (

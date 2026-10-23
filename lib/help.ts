@@ -48,7 +48,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           q: 'Why does it say "Too detailed to render on-chain"?',
           a: [
             'A work can have up to 2,048 runs (a run = consecutive pixels of the same color in a row). Beyond that, rendering the image would cost more gas than a single transaction allows, so other contracts could not read it.',
-            'Normal pixel art uses a few hundred runs. If you hit the limit, use fewer colors or merge similar shades.',
+            'Normal pixel art uses a few hundred runs. If you hit the limit, press "Fit on-chain" in the mint panel: it merges tiny specks into the colors around them until it fits (undo with ⌘Z). By hand: fewer overlapping stamps, larger flat areas, or merging similar shades all help.',
           ],
         },
       ],
@@ -249,6 +249,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
           a: [
             '1作品のランは 2,048 までです（ラン＝横に同じ色が続く区間）。それを超えると画像を組み立てる計算が1トランザクションの gas 上限を超え、ほかのコントラクトから読めなくなります。',
             'ふつうのドット絵は数百ランです。上限に当たったら、色数を減らすか近い色をまとめてください。',
+            'その場合は、mint の欄の「チェーンに収める」を押すと、小さな点を周りの色にまとめて上限に収めます（⌘Z で戻せます）。手で直すなら、スタンプの重ねすぎを減らす・同じ色の面を広くする・似た色をまとめる、が効きます。',
           ],
         },
       ],

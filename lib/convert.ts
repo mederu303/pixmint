@@ -472,3 +472,24 @@ export async function renderSvg(text: string): Promise<HTMLCanvasElement> {
     URL.revokeObjectURL(url);
   }
 }
+
+/**
+ * 描いた絵をチェーン上の上限（ラン 2,048）に収める（mint の欄の「チェーンに収める」）。
+ * まず色を変えずに小さな点をまとめ、それでも収まらなければ色数を下げる（バランス）。収まっていれば同じ絵を返す
+ */
+export function fitGrid(grid: PixGrid, bg: string): PixGrid {
+  if (countRuns(grid, bg) <= PXM_MAX_RUNS) return grid;
+  const simple = simplifyToFit(grid, bg, PXM_MAX_RUNS);
+  if (simple) return simple;
+  const size = grid.length;
+  const rgba = new Uint8ClampedArray(size * size * 4);
+  grid.forEach((row, r) =>
+    row.forEach((c, k) => {
+      if (!c) return;
+      const [R, G, B] = parse(c);
+      rgba.set([R, G, B, 255], (r * size + k) * 4);
+    }),
+  );
+  const colors = new Set(grid.flat().filter(Boolean)).size;
+  return convert(rgba, size, bg, { colors: Math.max(2, Math.min(64, colors)), dither: false, keep: 'balanced' }).grid;
+}
