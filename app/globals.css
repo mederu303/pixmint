@@ -264,3 +264,12 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 
 /* 作品ページの外部リンク（OpenSea・Etherscan / Basescan） */
 .work-links a.tool { text-decoration: none; display: inline-block; }
+
+/* Works の上のバナーと、OpenSea のコレクションへのリンク */
+.works-banner { position: relative; border: 1px solid var(--line-hi); box-shadow: 0 0 30px rgba(0, 255, 65, 0.06); }
+.works-banner img { display: block; width: 100%; height: auto; aspect-ratio: 1376 / 459; object-fit: cover; }
+.banner-links { position: absolute; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.banner-links a.tool { text-decoration: none; background: rgba(5, 6, 20, 0.78); backdrop-filter: blur(4px); }
+@media (max-width: 640px) {
+  .banner-links { position: static; padding: 8px; justify-content: flex-start; }
+}

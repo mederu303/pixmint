@@ -8,6 +8,8 @@ import { useI18n } from '../../lib/i18n';
 import { readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
 
 const PAGE = 24;
+/** OpenSea のコレクション。/assets/<chain>/<contract> はコレクションのページへ転送される（slug を変えてもリンクが切れない） */
+const OPENSEA: Record<number, string> = { 1: 'ethereum', 8453: 'base' };
 /** オフにしたチェーン（このブラウザだけに覚える） */
 const OFF_KEY = 'pixmint-gallery-off';
 
@@ -85,8 +87,28 @@ export default function Gallery() {
   const loaded = on.every((id) => totals[id] != null);
   const more = on.some((id) => Number(totals[id] ?? 0) > (works[id]?.length ?? 0));
 
+  const collections = PIX_CHAINS.filter((p) => OPENSEA[p.chain.id]);
+
   return (
     <div className="stack" style={{ gap: 20 }}>
+      <div className="works-banner">
+        <img src="/banner.jpg" alt="pixmint.mederu.art — full onchain" width={1376} height={459} />
+        {collections.length > 0 && (
+          <div className="banner-links">
+            {collections.map((p) => (
+              <a
+                key={p.chain.id}
+                className="tool"
+                href={`https://opensea.io/assets/${OPENSEA[p.chain.id]}/${p.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('gallery.opensea', { chain: LABEL[p.chain.id] })} ↗
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="chips" role="group" aria-label={t('gallery.chains')}>
           {PIX_CHAINS.map((p) => {

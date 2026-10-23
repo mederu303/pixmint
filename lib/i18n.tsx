@@ -94,6 +94,7 @@ const en = {
   'gallery.empty': 'No works yet.',
   'gallery.more': 'Load more',
   'gallery.chains': 'Chains to show',
+  'gallery.opensea': 'OpenSea · {chain}',
   'gallery.toggle': 'Show / hide works on this chain',
 
   'work.by': 'by',
@@ -228,6 +229,7 @@ const ja: Record<Key, string> = {
   'gallery.empty': 'まだ作品がありません。',
   'gallery.more': 'もっと見る',
   'gallery.chains': '表示するチェーン',
+  'gallery.opensea': 'OpenSea · {chain}',
   'gallery.toggle': 'このチェーンの作品を表示する／隠す',
 
   'work.by': 'by',
