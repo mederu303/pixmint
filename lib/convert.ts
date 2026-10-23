@@ -345,12 +345,12 @@ export function countRuns(grid: PixGrid, bg: string): number {
  *   2. 短いランの吸収: 長さ k 以下のランを、左右のうち色が近い方に塗り替える（k = 1, 2, 3, … と少しずつ上げる）
  * 収まらなければ null（呼び出し側で色数を下げる）
  */
-export function simplifyToFit(src: PixGrid, bg: string, max: number): PixGrid | null {
+export function simplifyToFit(src: PixGrid, bg: string, max: number, opts: { despeckle?: boolean } = {}): PixGrid | null {
   const size = src.length;
   const key = (c: string | null) => c ?? bg;
   let g = src.map((r) => [...r]);
   if (countRuns(g, bg) <= max) return g;
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < (opts.despeckle === false ? 0 : 2); pass++) {
     const next = g.map((r) => [...r]);
     for (let r = 0; r < size; r++)
       for (let c = 0; c < size; c++) {
@@ -410,7 +410,11 @@ export function simplifyToFit(src: PixGrid, bg: string, max: number): PixGrid | 
       let i = 0;
       while (i < size) {
         const [, j] = span(g[r], i);
-        if (j - i + 1 <= k && (i > 0 || j < size - 1)) cands.push({ r, x: i, d: target(r, i, j).d });
+        if (j - i + 1 <= k && (i > 0 || j < size - 1)) {
+          // 左右が同じ色の「穴」は、塗るとランが 2 つ減る。同じ見た目の変化で倍減るので先にやる
+          const both = i > 0 && j < size - 1 && key(g[r][i - 1]) === key(g[r][j + 1]);
+          cands.push({ r, x: i, d: target(r, i, j).d / (both ? 2 : 1) });
+        }
         i = j + 1;
       }
     }
@@ -474,12 +478,43 @@ export async function renderSvg(text: string): Promise<HTMLCanvasElement> {
 }
 
 /**
+ * 見た目がほとんど同じ色どうしをまとめる（いちばん近い組から）。上限に収まった時点、または差が limit を超えたらやめる。
+ * 例: スタンプの輪郭 #14121f と背景 #0a0a1a、少しだけ違う白どうし。形は変わらないのでランだけが減る
+ */
+function mergeSimilarColors(src: PixGrid, bg: string, max: number, limit: number): PixGrid {
+  const key = (c: string | null) => (c ?? bg).toLowerCase();
+  let g = src.map((r) => [...r]);
+  for (;;) {
+    if (countRuns(g, bg) <= max) return g;
+    const count = new Map<string, number>();
+    for (const row of g) for (const c of row) count.set(key(c), (count.get(key(c)) ?? 0) + 1);
+    const cs = [...count.keys()];
+    let best: [string, string] | null = null, bd = Infinity;
+    for (let i = 0; i < cs.length; i++)
+      for (let j = i + 1; j < cs.length; j++) {
+        const d = dist(parse(cs[i]), parse(cs[j]));
+        if (d < bd) [bd, best] = [d, [cs[i], cs[j]]];
+      }
+    if (!best || bd > limit) return g;
+    // 少ない方を多い方へ（背景はいつも残す）
+    let [from, to] = (count.get(best[0])! < count.get(best[1])!) ? best : [best[1], best[0]];
+    if (from === bg.toLowerCase()) [from, to] = [to, from];
+    const toVal = to === bg.toLowerCase() ? null : to;
+    g = g.map((row) => row.map((c) => (key(c) === from ? toVal : c)));
+  }
+}
+
+/**
  * 描いた絵をチェーン上の上限（ラン 2,048）に収める（mint の欄の「チェーンに収める」）。
- * まず色を変えずに小さな点をまとめ、それでも収まらなければ色数を下げる（バランス）。収まっていれば同じ絵を返す
+ * 1. ほとんど同じ色をまとめる → 2. 横の小さな点をまとめる → 3. それでも無理なら色数を下げる（バランス）。収まっていれば同じ絵を返す
  */
 export function fitGrid(grid: PixGrid, bg: string): PixGrid {
   if (countRuns(grid, bg) <= PXM_MAX_RUNS) return grid;
-  const simple = simplifyToFit(grid, bg, PXM_MAX_RUNS);
+  // 1. ほとんど同じ色をまとめる（差が小さい順。人の目でほぼ見分けがつかない範囲まで）
+  const merged = mergeSimilarColors(grid, bg, PXM_MAX_RUNS, 2 * 24 * 24 + 4 * 24 * 24 + 3 * 24 * 24);
+  if (countRuns(merged, bg) <= PXM_MAX_RUNS) return merged;
+  // 2. 横に並んだ小さな点を、目立たないものから隣の色へ（目の光などの 1 マスを消す縦横の掃除はしない）
+  const simple = simplifyToFit(merged, bg, PXM_MAX_RUNS, { despeckle: false });
   if (simple) return simple;
   const size = grid.length;
   const rgba = new Uint8ClampedArray(size * size * 4);
