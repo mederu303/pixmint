@@ -343,3 +343,28 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
 /* 四角・丸の 線 / 塗り（2 列でいっぱいに） */
 .shape-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 .shape-opts .tool { width: 100%; padding: 7px 0; text-align: center; }
+
+/* ── スマホ（幅 900px 以下）の描く画面: 縦 1 列にまとめる ──
+   道具はアイコンだけの 1 行、色・サイズは 1 行、パレットは 10 列、PNG と音は横並び */
+@media (max-width: 900px) {
+  .side { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+  .side > * { width: 100%; }
+  .side .sect { padding-top: 10px; }
+  .side .sect .colorrow select { flex: 1; }
+  .tools { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+  .tools .tb { padding: 8px 0; }
+  .tools .tb span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* 名前は画面に出さず、読み上げ用に残す */
+  .tools .tb svg { width: 18px; height: 18px; }
+  .side .sect:has(> .colorrow .chip.big) { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .side .sect:has(> .colorrow .chip.big) > .colorrow { display: contents; }
+  .side .sect:has(> .colorrow .chip.big) input.hex { flex: 1 1 90px; min-width: 0; }
+  .chip.big { width: 36px; height: 36px; }
+  .swatches { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+  .stamp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .sect.dl { flex-direction: row; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sect.dl .dl-btn { width: 100%; justify-content: center; }
+}
+/* とても狭いとき（幅 380px 以下）は道具を 2 行に */
+@media (max-width: 380px) {
+  .tools { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
