@@ -65,6 +65,11 @@ npm run dev              # http://localhost:3333
 - ガス代の実測は `DESIGN.md` §3（Sepolia は Glamsterdam 入りで mint 約 4.4 倍）
 - OpenSea はテストネット対応終了（2025-07）。Rarible testnet もインデックスされず。表示はメインネットで確認する
 
+## 本番サイト（2026-10-23）
+- **https://pixmint.mederu.art** = Vercel `mederu303-9891s-projects/pixmint` の production。DNS はお名前.com（01-04.dnsv.jp）に `A pixmint 76.76.21.21`
+- production の環境変数はまだ空（コントラクト無し＝「チェーンなし」の画面）。メインネットに置いたら `NEXT_PUBLIC_PIXMINT_1` / `_8453` を production に入れて `vercel deploy --prod`
+- テストネット用のアドレスは preview だけに入れている（本番に混ぜない）
+
 ## アイデア（2026-10-23・順番に少しずつ）
 1. ガス代表示 — ✅ 第1段階: ガス価格を12秒ごとに更新・「gas × gwei」・ランの使用率。
    次: チェーン横並びの比較（Base なら約〜 / ETH なら約〜）・円/ドル換算（価格フィードが要る）・「あと何色減らすと安くなるか」
