@@ -20,6 +20,12 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'stamp', key: 'T' }, // S は PNG 保存
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
+/** 色が暗いか（見た目の明るさ。0〜1 の 0.3 未満） */
+const isDark = (hex: string) => {
+  if (!HEX.test(hex)) return false;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3;
+};
 const clonePalettes = () => Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, [...v]]));
 
 export default function Studio() {
@@ -394,7 +400,8 @@ export default function Studio() {
 
         {tool === 'stamp' && (
           <div className="sect stamps">
-            <div className="stamp-grid">
+            {/* 今の色が暗いと、染まった部分と輪郭が暗い枠に溶けるので、見本だけ明るい下地にする */}
+            <div className={`stamp-grid ${isDark(color) ? 'light' : ''}`}>
               {STAMPS.map((x) => (
                 <button
                   key={x.id}
