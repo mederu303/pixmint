@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { sfx } from '../lib/sound';
 import { PALETTES, floodFill, lineCells, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
 interface Props {
@@ -17,15 +18,19 @@ interface Props {
   onLift?: () => void; // 選択範囲を持ち上げて浮かせる
   onMoveFloating?: (r: number, c: number) => void;
   onCommit?: () => void; // 浮いている絵を下ろす
+  // スタンプ（向き・大きさを反映したもの）。マウスの位置に薄く見せて、クリックで押す
+  stamp?: PixGrid | null;
+  onStamp?: (r: number, c: number) => void;
 }
 
 /** キャンバス。1マス = 1画素で描いて CSS で拡大する（原本 drawPixCanvas と同じ） */
-export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit }: Props) {
+export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPick, sel, floating, onSelect, onLift, onMoveFloating, onCommit, stamp, onStamp }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ last: [number, number]; work: PixGrid } | null>(null);
   // 選択ツールのドラッグ: 'select' = 範囲を作る / 'move' = 浮いている絵を動かす（つかんだ位置のずれを持つ）
   const sdrag = useRef<{ kind: 'select'; r0: number; c0: number } | { kind: 'move'; dr: number; dc: number } | null>(null);
   const size = grid.length;
+  const [hover, setHover] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     const cv = ref.current;
@@ -51,7 +56,20 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
           ctx.fillRect(floating.c + j, floating.r + i, 1, 1);
         }),
       );
-  }, [grid, bg, size, floating]);
+    // スタンプの下見（押す位置を薄く）
+    if (tool === 'stamp' && stamp && hover) {
+      const [r0, c0] = stampOrigin(hover, stamp);
+      ctx.globalAlpha = 0.55;
+      stamp.forEach((row, i) =>
+        row.forEach((v, j) => {
+          if (!v) return;
+          ctx.fillStyle = v;
+          ctx.fillRect(c0 + j, r0 + i, 1, 1);
+        }),
+      );
+      ctx.globalAlpha = 1;
+    }
+  }, [grid, bg, size, floating, tool, stamp, hover]);
 
   const inside = (s: PixRect | null | undefined, r: number, c: number) =>
     !!s && r >= s.r && r < s.r + s.h && c >= s.c && c < s.c + s.w;
@@ -90,9 +108,14 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
     }
     onBeginStroke();
     const work = grid.map((row) => [...row]);
+    if (tool === 'stamp') {
+      onStamp?.(r, c);
+      return;
+    }
     if (tool === 'fill') {
       floodFill(work, r, c, color);
       onChange(work);
+      sfx.fill();
       return;
     }
     ref.current!.setPointerCapture(e.pointerId);
@@ -102,6 +125,11 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
   };
 
   const move = (e: React.PointerEvent) => {
+    if (tool === 'stamp') {
+      const [r, c] = cellAt(e);
+      setHover((h) => (h && h[0] === r && h[1] === c ? h : [r, c]));
+      return;
+    }
     const sd = sdrag.current;
     if (sd) {
       // 動かすときははみ出してもよい（下ろすときに切れる）。範囲はキャンバスの中だけ
@@ -133,7 +161,14 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
 
   return (
     <div className="canvas-wrap">
-      <canvas ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      <canvas
+        ref={ref}
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onPointerLeave={() => setHover(null)}
+      />
       {box && (
         <div
           className={`sel-box ${floating ? 'floating' : ''}`}
@@ -152,6 +187,32 @@ export function PixCanvas({ grid, bg, color, tool, onChange, onBeginStroke, onPi
       )}
     </div>
   );
+}
+
+/** スタンプを押す左上（マウスの位置がスタンプの真ん中になるように） */
+export function stampOrigin([r, c]: [number, number], g: PixGrid): [number, number] {
+  return [r - Math.floor(g.length / 2), c - Math.floor((g[0]?.length ?? 0) / 2)];
+}
+
+/** スタンプの見本（小さく描く） */
+export function StampThumb({ grid }: { grid: PixGrid }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current;
+    const ctx = cv?.getContext('2d');
+    if (!cv || !ctx) return;
+    cv.width = grid[0]?.length ?? 1;
+    cv.height = grid.length;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    grid.forEach((row, i) =>
+      row.forEach((v, j) => {
+        if (!v) return;
+        ctx.fillStyle = v;
+        ctx.fillRect(j, i, 1, 1);
+      }),
+    );
+  }, [grid]);
+  return <canvas ref={ref} className="stamp-thumb" />;
 }
 
 /** パレット。小さめの四角を 10 列で。選んでいるものに枠 */
@@ -182,6 +243,9 @@ const ICONS: Record<string, string> = {
   clear: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   select: 'M4 4h3M10 4h4M17 4h3v3M20 10v4M20 17v3h-3M14 20h-4M7 20H4v-3M4 14v-4M4 7V4',
   import: 'M4 16l4-4 3 3 5-5 4 4M4 4h16v16H4zM9 8.5a1 1 0 100 .01',
+  stamp: 'M9 3h6v6l3 3v3H6v-3l3-3zM5 19h14M8 21h8',
+  sound: 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11',
+  mute: 'M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6',
   download: 'M12 4v11M7 10l5 5 5-5M5 19h14',
 };
 

@@ -297,3 +297,11 @@ footer a.brand:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(0, 
 .coll-social { position: absolute; top: 12px; right: 12px; z-index: 1; display: flex; gap: 8px; }
 .coll-social a { display: grid; place-items: center; width: 34px; height: 34px; color: var(--fg, #e6e6f0); background: rgba(5, 6, 20, 0.72); border: 1px solid var(--line-hi); backdrop-filter: blur(4px); }
 .coll-social a:hover { color: var(--accent); border-color: var(--accent); }
+
+/* スタンプの選び方 */
+.stamp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.stamp-btn { padding: 4px; border: 1px solid var(--line-hi); background: var(--panel); box-shadow: none; display: grid; place-items: center; aspect-ratio: 1; }
+.stamp-btn.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.stamp-thumb { width: 100%; height: auto; image-rendering: pixelated; }
+.sect.stamps { display: flex; flex-direction: column; gap: 8px; }
+.dl-btn.off { opacity: 0.6; }

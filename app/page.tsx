@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixCanvas, Swatches, ToolIcon } from '../components/Editor';
+import { PixCanvas, StampThumb, Swatches, ToolIcon, stampOrigin } from '../components/Editor';
+import { STAMPS, flip as flipG, rotate as rotateG, scale as scaleG, stampGrid } from '../lib/stamps';
+import { setSound, sfx, soundOn } from '../lib/sound';
 import { ImportDialog } from '../components/ImportDialog';
 import { loadImage, type LoadedImage } from '../lib/convert';
 import { MintPanel } from '../components/MintPanel';
@@ -15,6 +17,7 @@ const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'fill', key: 'G' },
   { id: 'picker', key: 'I' },
   { id: 'select', key: 'M' },
+  { id: 'stamp', key: 'S' },
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
 const clonePalettes = () => Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, [...v]]));
@@ -36,6 +39,13 @@ export default function Studio() {
   const [floating, setFloating] = useState<PixFloat | null>(null);
   const clip = useRef<PixGrid | null>(null);
   const pasteFallback = useRef(0);
+  // スタンプ: 種類・向き（0〜3 = 90° ずつ）・左右反転・大きさ
+  const [stampId, setStampId] = useState(STAMPS[0].id);
+  const [stampRot, setStampRot] = useState(0);
+  const [stampFlip, setStampFlip] = useState(false);
+  const [stampScale, setStampScale] = useState(1);
+  const [sound, setSoundState] = useState(true);
+  useEffect(() => setSoundState(soundOn()), []);
   // 画像 → ドット絵の確認画面
   const [importing, setImporting] = useState<LoadedImage | null>(null);
   const [dropping, setDropping] = useState(false);
@@ -96,6 +106,7 @@ export default function Studio() {
     // 浮いている絵は、持ち上げた／貼り付けた時点の履歴に戻すと消える
     setFloating(null);
     const prev = history.current.pop();
+    if (prev) sfx.undo();
     if (prev) setGrid(prev);
     bump((n) => n + 1);
   };
@@ -117,6 +128,7 @@ export default function Studio() {
   };
 
   const clear = () => {
+    sfx.boom();
     beginStroke();
     setFloating(null);
     setSel(null);
@@ -169,6 +181,21 @@ export default function Studio() {
     if (tool !== 'select') commit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool]);
+
+  // スタンプ（今の色・向き・大きさを反映）
+  const stampG = useMemo(() => {
+    const def = STAMPS.find((x) => x.id === stampId) ?? STAMPS[0];
+    let g = stampGrid(def, color);
+    for (let i = 0; i < stampRot; i++) g = rotateG(g);
+    if (stampFlip) g = flipG(g);
+    return scaleG(g, stampScale);
+  }, [stampId, stampRot, stampFlip, stampScale, color]);
+  const doStamp = (r: number, c: number) => {
+    beginStroke();
+    const [r0, c0] = stampOrigin([r, c], stampG);
+    setGrid((g) => stamp(g, { r: r0, c: c0, h: stampG.length, w: stampG[0].length, cells: stampG }));
+    sfx.stamp();
+  };
 
   const openImage = async (file: Blob | null | undefined) => {
     if (!file || !(file.type.startsWith('image/') || (file instanceof File && /\.svg$/i.test(file.name)))) return;
@@ -229,6 +256,11 @@ export default function Studio() {
       if (arrow && (sel || floating) && tool === 'select') {
         e.preventDefault();
         nudge(arrow[0], arrow[1]);
+        return;
+      }
+      if (tool === 'stamp' && !mod && (k === 'r' || k === 'f')) {
+        if (k === 'r') setStampRot((n) => (n + 1) % 4);
+        else setStampFlip((f) => !f);
         return;
       }
       const tl = TOOLS.find((x) => x.key.toLowerCase() === e.key.toLowerCase());
@@ -313,6 +345,39 @@ export default function Studio() {
           />
         </div>
 
+        {tool === 'stamp' && (
+          <div className="sect stamps">
+            <div className="stamp-grid">
+              {STAMPS.map((x) => (
+                <button
+                  key={x.id}
+                  className={`stamp-btn ${stampId === x.id ? 'on' : ''}`}
+                  onClick={() => setStampId(x.id)}
+                  title={x.id}
+                  aria-label={x.id}
+                  aria-pressed={stampId === x.id}
+                >
+                  <StampThumb grid={stampGrid(x, color)} />
+                </button>
+              ))}
+            </div>
+            <div className="chips">
+              <button className="tool" onClick={() => setStampRot((n) => (n + 1) % 4)} title={`${t('stamp.rotate')} (R)`}>
+                ⟳
+              </button>
+              <button className={`tool ${stampFlip ? 'on' : ''}`} onClick={() => setStampFlip((f) => !f)} title={`${t('stamp.flip')} (F)`}>
+                ⇋
+              </button>
+              {[1, 2].map((n) => (
+                <button key={n} className={`tool ${stampScale === n ? 'on' : ''}`} onClick={() => setStampScale(n)} title={t('stamp.size')}>
+                  {n}×
+                </button>
+              ))}
+            </div>
+            <span className="note">{t('stamp.hint')}</span>
+          </div>
+        )}
+
         <div className="sect">
           <div className="colorrow">
             <label className="chip big" title={t('editor.color')}>
@@ -390,6 +455,19 @@ export default function Studio() {
         </div>
 
         <div className="sect dl">
+          <button
+            className={`tool dl-btn ${sound ? '' : 'off'}`}
+            onClick={() => {
+              setSound(!sound);
+              setSoundState(!sound);
+              if (!sound) setTimeout(() => sfx.stamp(), 0);
+            }}
+            aria-pressed={sound}
+            title={t('editor.soundHint')}
+          >
+            <ToolIcon name={sound ? 'sound' : 'mute'} />
+            {sound ? t('editor.soundOn') : t('editor.soundOff')}
+          </button>
           <button className="tool dl-btn" onClick={download} title={t('editor.downloadHint', { px: exportPx })}>
             <ToolIcon name="download" />
             {t('editor.download')}
@@ -431,6 +509,8 @@ export default function Studio() {
           onLift={lift}
           onMoveFloating={(r, c) => setFloating((f) => (f ? { ...f, r, c } : f))}
           onCommit={commit}
+          stamp={stampG}
+          onStamp={doStamp}
         />
       </div>
       {importing && (

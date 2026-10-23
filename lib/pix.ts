@@ -5,7 +5,7 @@
 // pixmint は1レイヤー＋背景色（mint するのは合成後の1枚なので、まずは単純に）。
 
 export type PixGrid = (string | null)[][];
-export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker' | 'select';
+export type PixTool = 'pen' | 'eraser' | 'fill' | 'picker' | 'select' | 'stamp';
 
 /** 選択範囲（左上の行・列と高さ・幅） */
 export interface PixRect {
