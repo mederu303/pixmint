@@ -159,6 +159,7 @@ const en = {
   'work.next': 'Next work (→)',
   'work.navHint': '← → to browse',
   'work.note': 'The image lives inside the contract, which also renders the SVG. No IPFS, no server.',
+  'work.share': 'Share on X',
 
   'banner.testnet': 'TESTNET — pixmint is running on Sepolia and Base Sepolia. Test ETH has no value; works minted here are for trying it out.',
 
@@ -333,6 +334,7 @@ const ja: Record<Key, string> = {
   'work.next': '次の作品（→）',
   'work.navHint': '← → で作品を移動',
   'work.note': '絵はコントラクトの中にあり、SVG もコントラクトが組み立てます。IPFS やサーバーには依存していません。',
+  'work.share': 'X でシェア',
 
   'banner.testnet': 'テストネット — いまは Sepolia と Base Sepolia で動いています。テスト用の ETH に価値はなく、ここで mint した作品はお試し用です。',
 

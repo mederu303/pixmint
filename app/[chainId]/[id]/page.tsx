@@ -11,6 +11,7 @@ import { readNum, readWork, svgUrl, type WorkView } from '../../../lib/contract'
 import { useTx } from '../../../lib/useTx';
 import { neighbors } from '../../../lib/order';
 import { useI18n } from '../../../lib/i18n';
+import { artistName } from '../../../lib/names';
 
 const EXPLORER: Record<number, string> = {
   1: 'https://etherscan.io',
@@ -33,6 +34,14 @@ export default function WorkPage() {
   const { address, isConnected } = useAccount();
   const tx = useTx(chainId);
   const router = useRouter();
+  // X でシェア: 「題名 by 作者」とこのページの URL（カードの画像は opengraph-image.tsx）
+  const [artist, setArtist] = useState('');
+  useEffect(() => {
+    if (w) artistName(w.creator, chainId).then(setArtist);
+  }, [w?.creator, chainId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shareUrl = w
+    ? `https://x.com/intent/tweet?text=${encodeURIComponent(`${w.title || `#${w.id}`}${artist ? ` by ${artist}` : ''}`)}&url=${encodeURIComponent(`https://pixmint.mederu.art/${chainId}/${w.id}`)}`
+    : '';
 
   // 前・次の作品（← → キーでも移れる。文字を入力しているときは効かない）
   const [nav, setNav] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
@@ -204,6 +213,9 @@ export default function WorkPage() {
               {ex.replace('https://', '')} ↗
             </a>
           )}
+          <a className="tool" href={shareUrl} target="_blank" rel="noopener noreferrer">
+            {t('work.share')} ↗
+          </a>
         </div>
         <p className="note">
           {t('work.note')}

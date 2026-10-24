@@ -8,7 +8,7 @@
 import { createPublicClient, http, isAddressEqual, namehash, parseAbi, toCoinType, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
 import { PIX_CHAINS, pixChain } from './chains';
-import { PIXMINT_ABI, client } from './contract';
+import { PIXMINT_ABI, client, short } from './contract';
 
 /** kind: 'pix' = 作者が自分で付けた表示名（検証なし）/ 'ens' = .eth・Basename（逆引き＋正引きで照合済み） */
 export type ResolvedName = { name: string; kind: 'pix' | 'ens' };
@@ -101,3 +101,9 @@ export function forgetName(address: string) {
 }
 
 export const NAME_EVENT = 'pixmint:name';
+
+/** 作者名を文字で: 表示名 / ENS / Basename、無ければ短いアドレス（カード画像・シェア文に使う） */
+export async function artistName(address: string, preferChainId?: number): Promise<string> {
+  const n = await lookupName(address, preferChainId).catch(() => null);
+  return n?.name ?? short(address);
+}
