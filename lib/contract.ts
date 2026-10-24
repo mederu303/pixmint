@@ -1,7 +1,7 @@
 // pixmint — コントラクトの読み出し（ウォレット不要。公開 RPC から読む）
 import { createPublicClient, type Abi, type PublicClient } from 'viem';
 import art from './PixMint.json';
-import { pixChain, rpcTransport } from './chains';
+import { readChain, rpcTransport } from './chains';
 import { pxmToSvg } from '../src/pxm';
 
 export const PIXMINT_ABI = art.abi as Abi;
@@ -10,7 +10,7 @@ const clients = new Map<number, PublicClient>();
 export function client(chainId: number): PublicClient {
   let c = clients.get(chainId);
   if (!c) {
-    const p = pixChain(chainId);
+    const p = readChain(chainId);
     if (!p) throw new Error(`chain ${chainId} is not configured`);
     // batch: 一覧で数十件を読むので JSON-RPC のバッチにまとめる
     c = createPublicClient({ chain: p.chain, transport: rpcTransport(chainId, { batch: true }) }) as PublicClient;
@@ -37,7 +37,7 @@ export interface WorkView {
 
 export async function readWork(chainId: number, id: bigint): Promise<WorkView> {
   const c = client(chainId);
-  const address = pixChain(chainId)!.address;
+  const address = readChain(chainId)!.address;
   const r = <T,>(functionName: string) =>
     c.readContract({ address, abi: PIXMINT_ABI, functionName, args: [id] }) as Promise<T>;
   const [data, title, owner, w, price] = await Promise.all([
@@ -65,7 +65,7 @@ export async function readWork(chainId: number, id: bigint): Promise<WorkView> {
 
 export async function readTotal(chainId: number): Promise<bigint> {
   return (await client(chainId).readContract({
-    address: pixChain(chainId)!.address,
+    address: readChain(chainId)!.address,
     abi: PIXMINT_ABI,
     functionName: 'totalMinted',
   })) as bigint;
@@ -73,7 +73,7 @@ export async function readTotal(chainId: number): Promise<bigint> {
 
 export async function readNum(chainId: number, functionName: 'mintPrice' | 'feeBps'): Promise<bigint> {
   return BigInt(
-    (await client(chainId).readContract({ address: pixChain(chainId)!.address, abi: PIXMINT_ABI, functionName })) as
+    (await client(chainId).readContract({ address: readChain(chainId)!.address, abi: PIXMINT_ABI, functionName })) as
       | bigint
       | number,
   );
@@ -92,7 +92,7 @@ const known = new Map<number, Map<bigint, { size: number; colors: number; data?:
 /** 同じデータの作品の id（新しい順）。無ければ空 */
 export async function findSameArt(chainId: number, pxmHex: string, size: number, colors: number): Promise<bigint[]> {
   const c = client(chainId);
-  const address = pixChain(chainId)!.address;
+  const address = readChain(chainId)!.address;
   let m = known.get(chainId);
   if (!m) known.set(chainId, (m = new Map()));
   const total = await readTotal(chainId);

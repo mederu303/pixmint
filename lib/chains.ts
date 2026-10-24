@@ -57,6 +57,23 @@ export function rpcTransport(chainId: number, opts?: HttpTransportConfig): Trans
   return urls.length > 1 ? fallback(urls.map((u) => http(u, opts))) : http(urls[0], opts);
 }
 
+/** 公開済みのコントラクト（読み出し専用の控え）。そのサイトで設定していないチェーンの作品も、X のカードなどで読めるように。
+ *  例: テストネットの作品を本番のサイトの /l/… でシェアしたとき（2026-10-24）。mint・売買には使わない（pixChain だけ） */
+const KNOWN: Record<number, Hex> = {
+  1: '0xc8c425587a818fbfff287b59991fcf471fa47dd8',
+  8453: '0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8',
+  11155111: '0x2bcdf0a8b81022b6ef0273f10764d7065f800a03',
+  84532: '0x14c3b1972ecb84069399786893dbb1c949ae49b1',
+};
+
+/** 読むだけならこちら: このサイトの設定 → 無ければ公開済みの控え */
+export function readChain(chainId: number): PixChain | undefined {
+  const own = PIX_CHAINS.find((p) => p.chain.id === chainId);
+  if (own) return own;
+  const chain = CHAINS.find((c) => c.id === chainId);
+  return chain && KNOWN[chainId] ? { chain, address: KNOWN[chainId], rpc: ENV[chainId]?.rpc || undefined } : undefined;
+}
+
 export function pixChain(chainId: number): PixChain | undefined {
   return PIX_CHAINS.find((p) => p.chain.id === chainId);
 }
