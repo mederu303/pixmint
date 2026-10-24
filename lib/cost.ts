@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { createPublicClient, http, parseAbi, type Chain, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
-import { PIX_CHAINS } from './chains';
+import { PIX_CHAINS, rpcTransport } from './chains';
 import { PIXMINT_ABI, client } from './contract';
 
 export const OP_CHAINS = [8453, 84532];
@@ -22,8 +22,7 @@ function priceClient(chainId: number): PublicClient {
   if (!m) return client(chainId);
   let c = mainnets.get(m.id);
   if (!c) {
-    const rpc = m.id === 1 ? process.env.NEXT_PUBLIC_RPC_1 : process.env.NEXT_PUBLIC_RPC_8453;
-    c = createPublicClient({ chain: m, transport: http(rpc || undefined, { timeout: 8000 }) }) as PublicClient;
+    c = createPublicClient({ chain: m, transport: rpcTransport(m.id, { timeout: 8000 }) }) as PublicClient;
     mainnets.set(m.id, c);
   }
   return c;
@@ -144,7 +143,7 @@ export function useEthPrice() {
   useEffect(() => {
     feeds ??= createPublicClient({
       chain: mainnet,
-      transport: http(process.env.NEXT_PUBLIC_RPC_1 || undefined, { timeout: 8000 }),
+      transport: rpcTransport(1, { timeout: 8000 }),
     }) as PublicClient;
     let live = true;
     const read = async () => {

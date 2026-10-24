@@ -7,7 +7,7 @@
 // 作品のチェーンを先に見て、無ければ他の設定済みチェーンも見る。
 import { createPublicClient, http, isAddressEqual, namehash, parseAbi, toCoinType, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
-import { PIX_CHAINS, pixChain } from './chains';
+import { PIX_CHAINS, pixChain, rpcTransport } from './chains';
 import { PIXMINT_ABI, client, short } from './contract';
 
 /** kind: 'pix' = 作者が自分で付けた表示名（検証なし）/ 'ens' = .eth・Basename（逆引き＋正引きで照合済み） */
@@ -30,7 +30,7 @@ const L2_RESOLVER_ABI = parseAbi([
 async function basename(address: `0x${string}`): Promise<string | null> {
   baseClient ??= createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_RPC_8453 || undefined, { timeout: 6000 }),
+    transport: rpcTransport(8453, { timeout: 6000 }),
   }) as PublicClient;
   try {
     const reverse = namehash(`${address.toLowerCase().slice(2)}.80002105.reverse`);
@@ -65,7 +65,7 @@ async function pixName(address: `0x${string}`, preferChainId?: number): Promise<
 async function ensName(address: `0x${string}`): Promise<string | null> {
   ens ??= createPublicClient({
     chain: mainnet,
-    transport: http(process.env.NEXT_PUBLIC_RPC_1 || undefined, { timeout: 6000 }),
+    transport: rpcTransport(1, { timeout: 6000 }),
   }) as PublicClient;
   try {
     const n = await ens.getEnsName({ address });

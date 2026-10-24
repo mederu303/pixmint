@@ -5,7 +5,7 @@ import { createConfig, http, WagmiProvider } from 'wagmi';
 import { injected, mock, walletConnect } from 'wagmi/connectors';
 import type { Chain } from 'viem';
 import { mainnet } from 'viem/chains';
-import { PIX_CHAINS } from '../lib/chains';
+import { PIX_CHAINS, rpcTransport } from '../lib/chains';
 import { I18nProvider } from '../lib/i18n';
 
 // ウォレット: ブラウザ拡張（MetaMask・Rabby・Coinbase Wallet 拡張など）＋ WalletConnect（スマホのウォレットを QR で）。
@@ -43,7 +43,7 @@ const config = createConfig({
       : []),
     ...TEST_WALLETS.map((w) => mock({ accounts: [w.address], features: { defaultConnected: lastTest === w.address, reconnect: true } })),
   ],
-  transports: Object.fromEntries(chains.map((c) => [c.id, http(PIX_CHAINS.find((p) => p.chain.id === c.id)?.rpc)])),
+  transports: Object.fromEntries(chains.map((c) => [c.id, rpcTransport(c.id)])),
   ssr: true,
 });
 

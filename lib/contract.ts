@@ -1,7 +1,7 @@
 // pixmint — コントラクトの読み出し（ウォレット不要。公開 RPC から読む）
-import { createPublicClient, http, type Abi, type PublicClient } from 'viem';
+import { createPublicClient, type Abi, type PublicClient } from 'viem';
 import art from './PixMint.json';
-import { pixChain } from './chains';
+import { pixChain, rpcTransport } from './chains';
 import { pxmToSvg } from '../src/pxm';
 
 export const PIXMINT_ABI = art.abi as Abi;
@@ -13,7 +13,7 @@ export function client(chainId: number): PublicClient {
     const p = pixChain(chainId);
     if (!p) throw new Error(`chain ${chainId} is not configured`);
     // batch: 一覧で数十件を読むので JSON-RPC のバッチにまとめる
-    c = createPublicClient({ chain: p.chain, transport: http(p.rpc, { batch: true }) }) as PublicClient;
+    c = createPublicClient({ chain: p.chain, transport: rpcTransport(chainId, { batch: true }) }) as PublicClient;
     clients.set(chainId, c);
   }
   return c;
