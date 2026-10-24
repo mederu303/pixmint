@@ -426,3 +426,8 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .pop-score { position: absolute; transform: translate(-50%, -100%); font: 700 12px/1 var(--font-logo); color: #ffd23a; text-shadow: 0 0 6px rgba(0, 0, 0, 0.8); pointer-events: none; animation: pop-up 0.8s ease-out forwards; }
 @keyframes pop-up { to { transform: translate(-50%, -260%); opacity: 0; } }
 .credits-body[hidden] { display: none; } /* ゲーム中は文字の層を消す（残るとクリックを横取りする） */
+.pop-score.big { font-size: 22px; color: #ff6b9d; }
+.hud-star { color: #ffd23a !important; animation: blink 0.4s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.4; } }
+.boss-bar { position: absolute; top: 28px; left: 12px; right: 44px; height: 6px; border: 1px solid #ff3c5a; background: rgba(5, 6, 20, 0.7); pointer-events: none; }
+.boss-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff3c5a, #ff8fc8); transition: width 0.15s; }

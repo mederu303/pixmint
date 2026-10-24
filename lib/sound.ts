@@ -88,12 +88,15 @@ export const sfx = {
 
 // ── シューティング（クレジットの隠し遊び）の音 ──
 export const sfxGame = {
-  shoot: () => tone(1400, 700, 0.05, 'square', 0.025),
   hit: () => tone(400, 120, 0.12, 'square', 0.06),
   pop: () => {
     noise(0.25, 0.1);
     tone(600, 90, 0.2, 'triangle', 0.07);
   },
+  power: () => [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => tone(f, f, 0.09, 'square', 0.06), i * 60)),
+  boss: () => [196, 185, 175, 165].forEach((f, i) => setTimeout(() => tone(f, f * 0.9, 0.25, 'sawtooth', 0.08), i * 220)),
+  win: () => [523, 659, 784, 1047, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => tone(f, f, 0.12, 'square', 0.07), i * 90)),
+  over: () => [392, 311, 262, 196].forEach((f, i) => setTimeout(() => tone(f, f, 0.12, 'square', 0.08), i * 130)),
   ouch: () => {
     noise(0.5, 0.14);
     tone(220, 50, 0.45, 'sawtooth', 0.07);
@@ -110,6 +113,8 @@ const nf = (n: number) => 440 * 2 ** ((n - 69) / 12);
 let bgmTimer: ReturnType<typeof setInterval> | null = null;
 let bgmGain: GainNode | null = null;
 let bgmSpeed = 0;
+let bgmIdle = false; // GAME OVER: 同じ曲をテンポ半分で、ドラム無し（WALLS のタイトル・終了画面と同じ）
+let bgmMul = 1; // 無敵モード中は 5 度上げる
 
 function beepAt(a: AudioContext, out: AudioNode, t: number, f: number, d: number, type: OscillatorType, v: number, slide = 0) {
   const o = a.createOscillator();
@@ -154,6 +159,13 @@ function bassAt(a: AudioContext, out: AudioNode, t: number, f: number, d: number
 }
 
 export const bgm = {
+  /** 'play' = ふつう / 'idle' = GAME OVER の曲 */
+  mode(m: 'play' | 'idle') {
+    bgmIdle = m === 'idle';
+  },
+  pitch(mul: number) {
+    bgmMul = mul;
+  },
   speed(v: number) {
     bgmSpeed = Math.max(0, Math.min(1, v));
   },
@@ -168,16 +180,25 @@ export const bgm = {
     let next = a.currentTime + 0.1;
     bgmTimer = setInterval(() => {
       while (next < a.currentTime + 0.3) {
-        const iv = 0.26 - bgmSpeed * 0.15;
         const st = step % 32;
-        if (BASSN[st]) bassAt(a, out, next, nf(BASSN[st]) * 2, iv * 0.95);
+        if (bgmIdle) {
+          const iv = 0.34;
+          if (BASSN[st] && st % 2 === 0) beepAt(a, out, next, nf(BASSN[st]) * 2, 0.32, 'triangle', 0.05);
+          if (MELN[st]) beepAt(a, out, next, nf(MELN[st]), 0.3, 'triangle', 0.025);
+          next += iv;
+          step++;
+          continue;
+        }
+        const iv = 0.26 - bgmSpeed * 0.15;
+        const m = bgmMul;
+        if (BASSN[st]) bassAt(a, out, next, nf(BASSN[st]) * 2 * m, iv * 0.95);
         if (st % 4 < 2) noiseAt(a, out, next, 0.015, 0.06);
         else {
           noiseAt(a, out, next, 0.07, 0.16); // snare
           beepAt(a, out, next, 190, 0.07, 'triangle', 0.05, -60);
         }
         if (st % 8 === 0) beepAt(a, out, next, 55, 0.06, 'sine', 0.1, -20); // kick
-        if (MELN[st]) beepAt(a, out, next, nf(MELN[st]), iv * 0.8, 'square', 0.035);
+        if (MELN[st]) beepAt(a, out, next, nf(MELN[st]) * m, iv * 0.8, 'square', 0.035);
         next += iv;
         step++;
       }
@@ -192,5 +213,7 @@ export const bgm = {
       setTimeout(() => g.disconnect(), 600);
     }
     bgmGain = null;
+    bgmIdle = false;
+    bgmMul = 1;
   },
 };
