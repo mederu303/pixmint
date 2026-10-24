@@ -305,7 +305,18 @@ export function PopGame() {
       show();
     };
     cv.addEventListener('pointerdown', onDown);
+    // 別のタブに移ったり画面が隠れたりしたら BGM を止める（絵は止まるのに音だけ鳴り続けないように）
+    const onVis = () => {
+      if (document.hidden) bgm.stop();
+      else {
+        bgm.start();
+        bgm.mode(over ? 'idle' : 'play');
+        bgm.pitch(star ? 1.5 : 1);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
+      document.removeEventListener('visibilitychange', onVis);
       cancelAnimationFrame(raf);
       bgm.stop();
       cv.removeEventListener('pointerdown', onDown);
