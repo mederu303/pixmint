@@ -20,10 +20,22 @@ export default {
   async headers() {
     return [
       {
-        source: '/:path*',
+        // /l/embed/ 以外は埋め込み禁止
+        source: '/((?!l/embed/).*)',
         headers: [
           { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
           { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+      {
+        // X のプレイヤーカード（ツイートの中で作品を見せる）だけは X からの埋め込みを許す。
+        // このページは見るだけ（mint・購入のボタンを置かない）なので、クリックジャッキングの心配は無い
+        source: '/l/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors https://x.com https://*.x.com https://twitter.com https://*.twitter.com; base-uri 'self'; object-src 'none'; form-action 'self'" },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },

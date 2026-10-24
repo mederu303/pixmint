@@ -34,13 +34,13 @@ export default function WorkPage() {
   const { address, isConnected } = useAccount();
   const tx = useTx(chainId);
   const router = useRouter();
-  // X でシェア: 「題名 by 作者」とこのページの URL（カードの画像は opengraph-image.tsx）
+  // X でシェア: 「題名 by 作者」と共有用 URL /l/…（ツイートの中で作品をコントラクトから読んで見せるプレイヤーカード。app/l/）
   const [artist, setArtist] = useState('');
   useEffect(() => {
     if (w) artistName(w.creator, chainId).then(setArtist);
   }, [w?.creator, chainId]); // eslint-disable-line react-hooks/exhaustive-deps
   const shareUrl = w
-    ? `https://x.com/intent/tweet?text=${encodeURIComponent(`${w.title || `#${w.id}`}${artist ? ` by ${artist}` : ''}`)}&url=${encodeURIComponent(`https://pixmint.mederu.art/${chainId}/${w.id}`)}`
+    ? `https://x.com/intent/tweet?text=${encodeURIComponent(`${w.title || `#${w.id}`}${artist ? ` by ${artist}` : ''}`)}&url=${encodeURIComponent(`https://pixmint.mederu.art/l/${chainId}/${w.id}`)}`
     : '';
 
   // 前・次の作品（← → キーでも移れる。文字を入力しているときは効かない）

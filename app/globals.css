@@ -431,3 +431,12 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 @keyframes blink { 50% { opacity: 0.4; } }
 .boss-bar { position: absolute; top: 28px; left: 12px; right: 44px; height: 6px; border: 1px solid #ff3c5a; background: rgba(5, 6, 20, 0.7); pointer-events: none; }
 .boss-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff3c5a, #ff8fc8); transition: width 0.15s; }
+
+/* ── X のプレイヤーカード（/l/embed）: ヘッダーなどの上に全面で重ねる ── */
+.embed { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; background: #000; color: #eee; font-family: var(--font-mono, monospace); }
+.embed-art { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #050505; padding: 12px; }
+.embed-art img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.embed-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid rgba(255, 255, 255, 0.12); font-size: 12px; white-space: nowrap; overflow: hidden; }
+.embed-bar b { overflow: hidden; text-overflow: ellipsis; }
+.embed-chain { margin-left: auto; color: var(--accent); font-size: 10px; letter-spacing: 0.1em; }
+.embed-bar a { color: #eee; text-decoration: none; padding: 0 4px; }
