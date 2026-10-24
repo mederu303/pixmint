@@ -7,6 +7,7 @@ import { STAMPS, stampGrid } from '../lib/stamps';
 import { PALETTES } from '../lib/pix';
 import { useI18n } from '../lib/i18n';
 import { PopGame } from './PopGame';
+import { sfxGame } from '../lib/sound';
 
 const EXPLORER: Record<number, string> = {
   1: 'https://etherscan.io/address/',
@@ -107,6 +108,7 @@ export function Credits({ onClose }: { onClose: () => void }) {
       el.style.transform = `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d}px) rotate(${(Math.random() - 0.5) * 720}deg) scale(${0.4 + Math.random()})`;
       el.style.opacity = '0';
     });
+    sfxGame.sparkle();
     setPhase('scatter');
     setTimeout(() => setPhase('play'), 950);
   };

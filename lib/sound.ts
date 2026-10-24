@@ -93,6 +93,12 @@ export const sfxGame = {
     noise(0.25, 0.1);
     tone(600, 90, 0.2, 'triangle', 0.07);
   },
+  /** ゲーム開始: キラリーン（高い音が駆け上がって、きらっと残る） */
+  sparkle: () => {
+    [1319, 1760, 2349, 3136].forEach((f, i) => setTimeout(() => tone(f, f * 1.02, 0.18, 'triangle', 0.06), i * 55));
+    setTimeout(() => tone(2637, 5274, 0.6, 'sine', 0.05), 230);
+    setTimeout(() => tone(3951, 3951, 0.5, 'sine', 0.025), 330);
+  },
   power: () => [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => tone(f, f, 0.09, 'square', 0.06), i * 60)),
   boss: () => [196, 185, 175, 165].forEach((f, i) => setTimeout(() => tone(f, f * 0.9, 0.25, 'sawtooth', 0.08), i * 220)),
   win: () => [523, 659, 784, 1047, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => tone(f, f, 0.12, 'square', 0.07), i * 90)),
