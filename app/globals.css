@@ -407,3 +407,22 @@ header button.logo { background: none; border: 0; box-shadow: none; padding: 0; 
   .coll-id .coll-stats { align-self: flex-end; margin-bottom: 0; } /* 数字の下端をタグ・ボタンの下端にそろえる */
   .coll-right { position: absolute; right: 0; bottom: 0; margin: 0; }
 }
+
+/* ── クレジットの隠し遊び（シューティング） ── */
+button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; }
+.credits-box { transition: background 0.6s ease, box-shadow 0.6s ease; }
+.credits-box.bright { overflow: hidden; background: radial-gradient(ellipse at 50% 30%, #3b2a8f 0%, #1b1450 60%, #0e0b30 100%); box-shadow: 0 0 80px rgba(160, 120, 255, 0.45); }
+.credits-box.bright::before { content: ''; position: absolute; inset: 0; background: #fff; animation: flash 0.7s ease-out forwards; pointer-events: none; z-index: 3; }
+@keyframes flash { from { opacity: 0.95; } to { opacity: 0; } }
+.shooter { position: absolute; inset: 0; }
+.shooter-cv { width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
+.shooter-hud { position: absolute; top: 10px; left: 12px; right: 44px; display: flex; justify-content: space-between; font: 700 12px/1 var(--font-logo); color: #fff; text-shadow: 0 0 6px rgba(0, 255, 65, 0.7); pointer-events: none; letter-spacing: 0.06em; }
+.shooter-hud span:last-child { color: #ff6b9d; }
+.shooter-over { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; display: flex; flex-direction: column; gap: 10px; align-items: center; padding: 18px 24px; background: rgba(5, 6, 20, 0.85); border: 1px solid var(--accent); color: var(--accent); font: 700 26px/1 var(--font-logo); cursor: pointer; }
+.shooter-over small { font: 400 11px/1 var(--font-mono, monospace); color: #fff; letter-spacing: 0.1em; }
+.shooter-close { position: absolute; top: 6px; right: 6px; z-index: 2; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; background: rgba(5, 6, 20, 0.7); border: 1px solid var(--line-hi); color: #fff; font-size: 16px; line-height: 1; }
+.shooter-cv { cursor: pointer; }
+.shooter-hud em { font-style: normal; color: #ffd23a; }
+.pop-score { position: absolute; transform: translate(-50%, -100%); font: 700 12px/1 var(--font-logo); color: #ffd23a; text-shadow: 0 0 6px rgba(0, 0, 0, 0.8); pointer-events: none; animation: pop-up 0.8s ease-out forwards; }
+@keyframes pop-up { to { transform: translate(-50%, -260%); opacity: 0; } }
+.credits-body[hidden] { display: none; } /* ゲーム中は文字の層を消す（残るとクリックを横取りする） */

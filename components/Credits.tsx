@@ -1,11 +1,12 @@
 'use client';
 // pixmint — クレジット（ロゴを押すと開く）。背景はスタンプが跳ねながら流れるアニメーション
 //   動きを減らす設定（prefers-reduced-motion）の人には、止まった絵で見せる
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PIX_CHAINS, LABEL } from '../lib/chains';
 import { STAMPS, stampGrid } from '../lib/stamps';
 import { PALETTES } from '../lib/pix';
 import { useI18n } from '../lib/i18n';
+import { PopGame } from './PopGame';
 
 const EXPLORER: Record<number, string> = {
   1: 'https://etherscan.io/address/',
@@ -91,14 +92,42 @@ export function Credits({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  // 隠し遊び: ロゴを押すと文字が散らばって消え、画面が明るくなってシューティングが始まる
+  const [phase, setPhase] = useState<'credits' | 'scatter' | 'play'>('credits');
+  const box = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+  const start = () => {
+    if (phase !== 'credits' || !box.current || !body.current) return;
+    box.current.style.height = `${Math.max(box.current.offsetHeight, 420)}px`;
+    const parts = body.current.querySelectorAll<HTMLElement>('.credits-body > :not(dl):not(.credits-links), .credits-list > *, .credits-links > *');
+    parts.forEach((el) => {
+      const a = Math.random() * Math.PI * 2;
+      const d = 260 + Math.random() * 260;
+      el.style.transition = `transform 0.9s cubic-bezier(.2,.7,.3,1) ${Math.random() * 0.15}s, opacity 0.9s ease ${Math.random() * 0.15}s`;
+      el.style.transform = `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d}px) rotate(${(Math.random() - 0.5) * 720}deg) scale(${0.4 + Math.random()})`;
+      el.style.opacity = '0';
+    });
+    setPhase('scatter');
+    setTimeout(() => setPhase('play'), 950);
+  };
   const version = process.env.NEXT_PUBLIC_VERSION ?? '';
   const build = process.env.NEXT_PUBLIC_BUILD ?? '';
   return (
     <div className="modal credits" role="dialog" aria-modal="true" aria-label={t('credits.title')} onClick={onClose}>
-      <div className="credits-box" onClick={(e) => e.stopPropagation()}>
-        <StampRain />
-        <div className="credits-body">
-          <div className="credits-logo">pixmint</div>
+      <div ref={box} className={`credits-box${phase === 'play' ? ' bright' : ''}`} onClick={(e) => e.stopPropagation()}>
+        {phase !== 'play' && <StampRain />}
+        {phase === 'play' && (
+          <>
+            <PopGame />
+            <button className="shooter-close" onClick={onClose} aria-label={t('credits.close')}>
+              ×
+            </button>
+          </>
+        )}
+        <div ref={body} className="credits-body" hidden={phase === 'play'}>
+          <button className="credits-logo" onClick={start} title="?">
+            pixmint
+          </button>
           <div className="note">
             v{version}
             {build && ` · build ${build}`}
