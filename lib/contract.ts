@@ -106,7 +106,11 @@ export async function readNum(chainId: number, functionName: 'mintPrice' | 'feeB
 export const estimateMintGas = (bytes: number, titleBytes: number) => 130_000 + 391 * bytes + 700 * titleBytes;
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-export const svgUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+/** 画面に出す用の data URL。外周を 0.05 マスだけ内側で切る（viewBox を少し縮める）。
+ *  背景の <rect> の上にマスの <path> を重ねる作りなので、半端な倍率に縮めると端の境目がぼけて、
+ *  下の背景色が細い線に見える（2026-10-25 黄色の絵の端に線）。チェーンの SVG は変えない */
+export const svgUrl = (svg: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(svg.replace(/viewBox="0 0 (\d+) (\d+)"/, (_, w, h) => `viewBox="0.05 0.05 ${+w - 0.1} ${+h - 0.1}"`))}`;
 
 // ── 同じ絵がもう mint されているか（コントラクトは二重 mint を止めないので、アプリで知らせる） ──
 // works(id) のサイズ・色数が同じものだけ data(id) を読んで比べる。読んだものはチェーンごとに覚えておく
