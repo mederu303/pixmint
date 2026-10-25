@@ -97,6 +97,8 @@ const KNOWN: Record<number, Hex> = {
 };
 
 const KNOWN4: Record<number, Hex> = {
+  1: '0x53a5187f1f3c6b87582c97138a83da19fcaa7793',
+  8453: '0x14c3b1972ecb84069399786893dbb1c949ae49b1',
   11155111: '0x0ce32d70b44ddb560e6ebb5bb40cf776e5fba934',
   84532: '0x351642eca5534f86d49c6164d6c2514d039bdc40',
 };

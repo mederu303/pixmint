@@ -53,6 +53,18 @@ pixmint もこれに合わせる（masa さん: 「使用料は一律で使用�
 | 自分のスタンプ | 作品の作者自身のスタンプは分配の相手から外す（`stampArtists`）。売り手も外す |
 | trait | 作品: `Stamp`（名前）・`Stamp Artist`（作者・重複なし）。スタンプ自体: `Type: Stamp` |
 
+## メインネット（2026-10-25・v1.5.0）
+
+v4 に乗り換え。v3 は **Genesis** としてミントを閉じた（`setMintOpen(false)`。作品・売買・OpenSea はそのまま）。
+owner は 0xC9DE84e5249C318D96DDBFF2f63ded08ED480C08。どちらも siteURL = https://pixmint.mederu.art/v4。Sourcify exact_match。
+
+| チェーン | PixMint4（v4） | デプロイ tx | v3 を閉じた tx |
+|---|---|---|---|
+| Base | `0x14c3b1972ecb84069399786893dbb1c949ae49b1` | 0x1839…a4f3（約 0.000029 ETH） | 0x92a0…7bad |
+| Ethereum | `0x53a5187f1f3c6b87582c97138a83da19fcaa7793` | 0x83d3…4485（約 0.00021 ETH） | 0x02c0…5917 |
+
+Vercel: production に `NEXT_PUBLIC_PIXMINT4_8453`・`NEXT_PUBLIC_PIXMINT4_1`、preview にテストネットの 2 つ。
+
 ## テストネット（2026-10-25）
 
 v3 はそのまま。`.env.local` はまだ v3 を指している（サイトをつなぐときに切り替える）。

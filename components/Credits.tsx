@@ -2,7 +2,7 @@
 // pixmint — クレジット（ロゴを押すと開く）。背景はスタンプが跳ねながら流れるアニメーション
 //   動きを減らす設定（prefers-reduced-motion）の人には、止まった絵で見せる
 import { useEffect, useRef, useState } from 'react';
-import { PIX_CHAINS, LABEL } from '../lib/chains';
+import { PIX4_CHAINS, PIX_CHAINS, LABEL } from '../lib/chains';
 import { STAMPS, stampGrid } from '../lib/stamps';
 import { PALETTES } from '../lib/pix';
 import { useI18n } from '../lib/i18n';
@@ -140,9 +140,10 @@ export function Credits({ onClose }: { onClose: () => void }) {
             <dd>mederu.art</dd>
             <dt>{t('credits.contract')}</dt>
             <dd>
-              {PIX_CHAINS.map((p) => (
-                <a key={p.chain.id} href={`${EXPLORER[p.chain.id] ?? ''}${p.address}`} target="_blank" rel="noopener noreferrer">
-                  PixMint v3 · {LABEL[p.chain.id]} ↗
+              {/* v4（スタンプ入り。今のミント先）と v3（Genesis。2026-10-25 にミントを閉じた最初期のコレクション） */}
+              {[...PIX4_CHAINS, ...PIX_CHAINS].map((p) => (
+                <a key={`${p.chain.id}-${p.ver}`} href={`${EXPLORER[p.chain.id] ?? ''}${p.address}`} target="_blank" rel="noopener noreferrer">
+                  {p.ver === 4 ? 'PixMint v4' : 'PixMint v3 Genesis'} · {LABEL[p.chain.id]} ↗
                 </a>
               ))}
             </dd>

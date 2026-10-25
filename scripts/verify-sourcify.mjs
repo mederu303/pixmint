@@ -1,6 +1,7 @@
 // pixmint — コントラクトのソースを Sourcify で公開する（API キー不要。Etherscan / Blockscout も Sourcify の結果を読む）
 //
-//   node scripts/verify-sourcify.mjs <chainId> <PixMint のアドレス> [deploy の tx ハッシュ]
+//   node scripts/verify-sourcify.mjs <chainId> <PixMint のアドレス> [deploy の tx ハッシュ] [v4]
+//   v4 を付けると contracts/PixMint4.sol（lib/PixMint4.json）
 //
 // test/run.mjs と同じ設定（solc-js・optimizer 200・evmVersion cancun）でビルドしたものを送る
 import fs from 'node:fs';
@@ -8,14 +9,17 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import solc from 'solc';
 
-const [chainId, address, txHash] = process.argv.slice(2);
+const [chainId, address, txHash, verArg] = process.argv.slice(2);
+const v4 = verArg === 'v4';
+const FILE = v4 ? 'PixMint4.sol' : 'PixMint.sol';
+const NAME = v4 ? 'PixMint4' : 'PixMint';
 if (!chainId || !/^0x[0-9a-fA-F]{40}$/.test(address ?? '')) {
   console.error('使い方: node scripts/verify-sourcify.mjs <chainId> 0x<PixMint> [deploy tx]');
   process.exit(1);
 }
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const sources = { 'PixMint.sol': { content: fs.readFileSync(path.join(root, 'contracts/PixMint.sol'), 'utf8') } };
+const sources = { [FILE]: { content: fs.readFileSync(path.join(root, 'contracts', FILE), 'utf8') } };
 const input = {
   language: 'Solidity',
   sources,
@@ -33,12 +37,12 @@ const out = JSON.parse(
 );
 const errs = (out.errors ?? []).filter((e) => e.severity === 'error');
 if (errs.length) throw new Error(errs.map((e) => e.formattedMessage).join('\n'));
-const built = '0x' + out.contracts['PixMint.sol'].PixMint.evm.bytecode.object;
-const committed = JSON.parse(fs.readFileSync(path.join(root, 'lib/PixMint.json'))).bytecode;
+const built = '0x' + out.contracts[FILE][NAME].evm.bytecode.object;
+const committed = JSON.parse(fs.readFileSync(path.join(root, v4 ? 'lib/PixMint4.json' : 'lib/PixMint.json'))).bytecode;
 if (built !== committed) throw new Error('lib/PixMint.json と今のソースのビルド結果が違います（npm test で作り直してから）');
 
 const compilerVersion = solc.version().replace('.Emscripten.clang', '');
-const body = { stdJsonInput: input, compilerVersion, contractIdentifier: 'PixMint.sol:PixMint', ...(txHash ? { creationTransactionHash: txHash } : {}) };
+const body = { stdJsonInput: input, compilerVersion, contractIdentifier: `${FILE}:${NAME}`, ...(txHash ? { creationTransactionHash: txHash } : {}) };
 const API = 'https://sourcify.dev/server';
 const res = await fetch(`${API}/v2/verify/${chainId}/${address}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const j = await res.json();
