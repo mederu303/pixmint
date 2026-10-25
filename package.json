@@ -4,6 +4,7 @@
   "description": "Fully on-chain pixel art mint for ETH and Base",
   "scripts": {
     "test": "node --experimental-strip-types test/run.mjs",
+    "test:v4": "node --experimental-strip-types test/run4.mjs",
     "dev": "next dev -p 3333",
     "build": "next build",
     "start": "next start",
