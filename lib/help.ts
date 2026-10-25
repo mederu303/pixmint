@@ -59,7 +59,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
       items: [
         {
           q: 'How much does minting cost?',
-          a: ['Minting is free — you only pay the network gas. The panel on the Pix page shows the cost on each chain before you mint.'],
+          a: ['Minting is free — you only pay the network gas. The panel on the Pix page shows the cost on each chain before you mint.', 'Minting a stamp adds a 0.001 ETH registration fee (to keep spam out; the contract caps it at 0.01 ETH).'],
         },
         {
           q: 'How are sales on pixmint split?',
@@ -70,6 +70,20 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '| Resale (collector sells) | 2.5% | 0–10% (set at mint) | the rest |',
             'Example: a resale at 1 ETH with a 5% royalty → 0.025 ETH to mederu, 0.05 ETH to the artist, 0.925 ETH to the seller.',
             'The mederu fee can never exceed 5% — that cap is fixed in the contract.',
+          ],
+        },
+        {
+          q: 'Stamp royalties — how do stamp artists get paid?',
+          a: [
+            'When a work that uses community stamps sells on pixmint, 8% of the price is split equally among the artists of the stamps it uses (the same model as materials on mederu.ART). This comes before the seller\'s share, on first sales and every resale.',
+            '| Sale (1 ETH, stamps by A and B) | mederu fee | Artist royalty | Stamp artists | Seller receives |',
+            '| First sale (artist sells) | 2.5% | — | A 4% · B 4% | 89.5% |',
+            '| Resale (5% royalty) | 2.5% | 5% | A 4% · B 4% | 84.5% |',
+            '- Official stamps (by mederu) pay no one, so mederu is never paid twice.',
+            '- You are not paid for your own stamps in your own work, and a seller who is also a stamp artist is left out of that sale\'s split.',
+            '- Stamps are recorded automatically when you stamp them in Pix, up to 16 per work, and only stamps from the chain you mint on count.',
+            '- Like the artist royalty, the stamp split is guaranteed only on pixmint. Outside marketplaces only see the artist royalty.',
+            '- The 8% is fixed in the contract and cannot be changed.',
           ],
         },
         {
@@ -159,6 +173,22 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '- Hold Ctrl while clicking to flip just that stamp, and Shift to make it 2×.',
             '- Stamp-heavy pieces fit best on 64×64 to 96×96. On 128×128, many overlapping stamps (their outlines especially) can go over the on-chain limit; 2× stamps or "Fit on-chain" in the mint panel help.',
             '- Parts of each stamp take your current color, so you can tint them. Outlines and small details keep their own colors.',
+          ],
+        },
+        {
+          q: 'Community stamps',
+          a: [
+            '- Below the official stamps, Community lists stamps minted by artists on the chain you mint on (choose it in the mint panel or the wallet menu). They keep their artist\'s colors.',
+            '- Stamps you place are recorded with your work when you mint, so their artists share 8% when it sells (see "Stamp royalties"). Switching chains after using stamps asks first, since they would no longer be recorded.',
+            '- Clear, or changing the canvas size, empties the list of recorded stamps.',
+          ],
+        },
+        {
+          q: 'Mint your own stamp',
+          a: [
+            '- Draw at 8×8 or 16×16, tick "Mint as a stamp" in the mint panel, and give it a name (up to 32 bytes).',
+            '- Empty cells (the background color) become transparent when the stamp is used, so draw anything you want to keep in other colors.',
+            '- A stamp is a normal pixmint NFT you can sell; its royalty works like any other work. The stamp share always goes to you, the artist, even after you sell the stamp itself.',
           ],
         },
         {
@@ -265,7 +295,7 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
       items: [
         {
           q: 'mint にいくらかかる？',
-          a: ['mint は無料です。かかるのはネットワークのガス代だけ。PIX（描くページ）の右の欄に、チェーンごとの費用が mint 前に出ます。'],
+          a: ['mint は無料です。かかるのはネットワークのガス代だけ。PIX（描くページ）の右の欄に、チェーンごとの費用が mint 前に出ます。', 'スタンプとして出すときだけ、登録の手数料 0.001 ETH がかかります（荒らし対策。上限 0.01 ETH はコントラクトで決まっています）。'],
         },
         {
           q: 'pixmint での売上はどう分けられる？',
@@ -276,6 +306,20 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '| 二次販売（コレクターが売る） | 2.5% | 0〜10%（mint 時に設定） | 残り |',
             '例: ロイヤリティ 5% の作品が 1 ETH で二次販売 → mederu 0.025 ETH・作者 0.05 ETH・売り手 0.925 ETH。',
             'mederu の手数料は 5% を超えられません。この上限はコントラクトに固定されています。',
+          ],
+        },
+        {
+          q: 'スタンプのロイヤリティ（スタンプの作者へ）',
+          a: [
+            'みんなのスタンプを使った作品が pixmint で売れると、売値の 8% を、使ったスタンプの作者の人数で等分して払います（mederu.ART の素材と同じ考え方）。一次販売でも、転売のたびにも払われます。',
+            '| 販売（1 ETH・A と B のスタンプ） | mederu 手数料 | 作者ロイヤリティ | スタンプの作者 | 売り手の受け取り |',
+            '| 一次販売（作者が売る） | 2.5% | — | A 4%・B 4% | 89.5% |',
+            '| 二次販売（ロイヤリティ 5%） | 2.5% | 5% | A 4%・B 4% | 84.5% |',
+            '- 公式スタンプ（mederu が出したもの）は、使っても誰にも払われません（手数料と二重にならないように）。',
+            '- 自分のスタンプを自分の作品に使った分は、自分には払われません。売り手がスタンプの作者のときも、その人は外れます。',
+            '- PIX でスタンプを押すと自動で記録されます。1 作品 16 個まで、ミントするチェーンのスタンプだけが数えられます。',
+            '- 作者ロイヤリティと同じく、確実に払われるのは pixmint で売れたときだけです。外のマーケットでは作者ロイヤリティだけが申告されます。',
+            '- 8% はコントラクトで決まっていて、変えられません。',
           ],
         },
         {
@@ -363,6 +407,22 @@ export const HELP: Record<'en' | 'ja', HelpSection[]> = {
             '- Ctrl を押しながらクリックするとその1回だけ左右反転、Shift を押しながらだと 2 倍になります。',
             '- スタンプをたくさん使う絵は、64×64〜96×96 がおすすめです。128×128 でスタンプを重ねすぎると、とくに輪郭の分だけランが増えて、チェーン上の上限を超えやすくなります。2× のスタンプや、mint の欄の「チェーンに収める」も役に立ちます。',
             '- スタンプの一部は今の色に染まります。輪郭や細かい部分は、もとの色のままです。',
+          ],
+        },
+        {
+          q: 'みんなのスタンプ',
+          a: [
+            '- 公式の下の「みんなのスタンプ」に、作家が出したスタンプが並びます。ミントするチェーン（ミントの欄かウォレットのメニューで選ぶ）のスタンプだけが出ます。色は作者が描いたままです。',
+            '- 押したスタンプは mint のときに作品と一緒に記録され、売れると作者に 8% が分けられます（「スタンプのロイヤリティ」）。スタンプを使ったあとでチェーンを変えると、記録されなくなるので確認が出ます。',
+            '- 全消し、またはキャンバスの大きさを変えると、記録するスタンプも空になります。',
+          ],
+        },
+        {
+          q: '自分のスタンプを出す',
+          a: [
+            '- 8×8 か 16×16 で描き、ミントの欄の「スタンプとして出す」にチェックを入れて、名前（32 バイトまで）を付けます。',
+            '- 何も描いていないマス（背景の色）は、押したときに透明になります。残したい部分は背景と別の色で描いてください。',
+            '- スタンプもふつうの pixmint の NFT で、売り買いできます。スタンプの分配は、スタンプを売ったあとも作者のあなたに届きます。',
           ],
         },
         {
