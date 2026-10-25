@@ -6,7 +6,8 @@ import { setSound, sfx, soundOn } from '../lib/sound';
 import { ImportDialog } from '../components/ImportDialog';
 import { fitGrid, loadImage, type LoadedImage } from '../lib/convert';
 import { MintPanel, type UsedStamp } from '../components/MintPanel';
-import { LABEL, PIX4_CHAINS, PIX_CHAINS } from '../lib/chains';
+import { LABEL, PIX4_CHAINS } from '../lib/chains';
+import { requestMintChain, setMintChainGuard, useMintChain } from '../lib/mintChain';
 import { readStamps, short, type StampView } from '../lib/contract';
 import { HIDDEN_STAMPS } from '../lib/stampsHidden';
 import { pxmToGrid } from '../src/pxm';
@@ -15,7 +16,6 @@ import { isDark, ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, bas
 
 const SAVE_KEY = 'pixmint-doc-v1';
 const PAL_KEY = 'pixmint-palettes-v1';
-const CHAIN_KEY = 'pixmint-mint-chain';
 const TOOLS: { id: PixTool; key: string }[] = [
   { id: 'pen', key: 'B' },
   { id: 'eraser', key: 'E' },
@@ -73,26 +73,21 @@ export default function Studio() {
     };
   }, []);
   const stampKey = (x: StampView) => `c:${x.chainId}:${x.id}`;
-  // ミントするチェーン。スタンプの番号はチェーンごとに別なので、先に決めて、一覧もそのチェーンのスタンプだけにする
-  const [mintChain, setMintChain] = useState<number>(PIX_CHAINS[0]?.chain.id ?? 0);
+  // ミントするチェーン（lib/mintChain.ts。ウォレットのメニューからも変えられる）。
+  // スタンプの番号はチェーンごとに別なので、先に決めて、一覧もそのチェーンのスタンプだけにする
+  const mintChain = useMintChain();
+  // 切り替える前に: ほかのチェーンのスタンプを使っていたら、記録されなくなることを確かめる
   useEffect(() => {
-    try {
-      const v = Number(localStorage.getItem(CHAIN_KEY));
-      if (PIX_CHAINS.some((p) => p.chain.id === v)) setMintChain(v);
-    } catch {}
-  }, []);
-  /** チェーンを変える。ほかのチェーンのスタンプを使っていたら、記録されなくなることを確かめてから */
-  const changeChain = (id: number) => {
-    if (id === mintChain) return;
-    const lost = usedStamps.filter((x) => x.chainId !== id);
-    if (lost.length && !window.confirm(t('stamp.switchChain', { n: lost.length, chain: LABEL[id] ?? '' }))) return;
-    setUsedStamps((us) => us.filter((x) => x.chainId === id));
-    if (pickedCommunity && pickedCommunity.chainId !== id) setStampId(STAMPS[0].id);
-    setMintChain(id);
-    try {
-      localStorage.setItem(CHAIN_KEY, String(id));
-    } catch {}
-  };
+    setMintChainGuard((id) => {
+      const lost = usedStamps.filter((x) => x.chainId !== id);
+      if (lost.length && !window.confirm(t('stamp.switchChain', { n: lost.length, chain: LABEL[id] ?? '' }))) return false;
+      setUsedStamps((us) => us.filter((x) => x.chainId === id));
+      setStampId((cur) => (cur.startsWith('c:') && !cur.startsWith(`c:${id}:`) ? STAMPS[0].id : cur));
+      return true;
+    });
+    return () => setMintChainGuard(null);
+  }, [usedStamps, t]);
+  const changeChain = (id: number) => requestMintChain(id);
   const chainStamps = community.filter((x) => x.chainId === mintChain);
   const [sound, setSoundState] = useState(true);
   const [shapeFill, setShapeFill] = useState(false); // 四角・楕円を塗りつぶすか

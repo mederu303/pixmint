@@ -2,12 +2,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, type Connector } from 'wagmi';
 import { Name } from './Name';
 import { Credits } from './Credits';
 import { TEST_WALLETS, TEST_WALLET_KEY } from '../app/providers';
 import { LangToggle, useI18n } from '../lib/i18n';
-import { PIX_CHAINS } from '../lib/chains';
+import { LABEL, PIX_CHAINS } from '../lib/chains';
+import { requestMintChain, useMintChain } from '../lib/mintChain';
 import { TESTNETS } from '../lib/cost';
 
 export function Header() {
@@ -72,10 +73,27 @@ export function Footer() {
 
 export function Wallet() {
   const { t } = useI18n();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId: walletChain } = useAccount();
   const { connect, connectors, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
+  const mintChain = useMintChain();
   const [open, setOpen] = useState(false);
+  /** ミントするチェーンを変えて、ウォレットのネットワークも合わせる（Pix がスタンプの確認で止めたら何もしない） */
+  const pickChain = (id: number) => {
+    if (!requestMintChain(id)) return;
+    if (isConnected && walletChain !== id) switchChain({ chainId: id });
+    setOpen(false);
+  };
+  const chainItems = PIX_CHAINS.length > 1 && (
+    <div className="menu-chains" role="group" aria-label={t('wallet.chain')}>
+      {PIX_CHAINS.map((p) => (
+        <button key={p.chain.id} className={`ghost ${mintChain === p.chain.id ? 'on' : ''}`} aria-pressed={mintChain === p.chain.id} onClick={() => pickChain(p.chain.id)}>
+          {LABEL[p.chain.id]}
+        </button>
+      ))}
+    </div>
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,6 +132,7 @@ export function Wallet() {
       {isConnected && address ? (
         <button className="ghost" onClick={() => setOpen((o) => !o)}>
           <Name address={address} />
+          {PIX_CHAINS.length > 1 && <span className="wallet-chain">{LABEL[mintChain]}</span>}
         </button>
       ) : (
         <button onClick={() => setOpen((o) => !o)} disabled={isPending}>
@@ -124,6 +143,7 @@ export function Wallet() {
         <div className="menu">
           {isConnected ? (
             <>
+              {chainItems}
               <Link href="/me" onClick={() => setOpen(false)}>
                 {t('wallet.setName')}
               </Link>

@@ -467,3 +467,9 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .work-palette { display: flex; flex-wrap: wrap; gap: 4px; }
 .work-palette button { width: 18px; height: 18px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 2px; box-shadow: none; cursor: copy; }
 .work-palette button:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.6); }
+
+/* ウォレットのメニュー: ミントするチェーン（選ぶとウォレットのネットワークも切り替わる） */
+.menu-chains { display: flex; gap: 4px; padding: 4px; border-bottom: 1px solid var(--line-hi); }
+.menu-chains button { flex: 1; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+.menu-chains button.on { color: var(--accent); border-color: var(--accent); }
+.wallet-chain { margin-left: 8px; font-size: 10px; letter-spacing: 0.06em; color: var(--dim); }

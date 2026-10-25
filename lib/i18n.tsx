@@ -25,6 +25,7 @@ const en = {
   'wallet.testBuyer': 'Test wallet: buyer',
   'wallet.setName': 'Display name',
   'wallet.disconnect': 'Disconnect',
+  'wallet.chain': 'Mint on',
   footer: 'pixmint by mederu.art · every pixel lives on-chain',
 
   'tool.pen': 'Pen',
@@ -216,6 +217,7 @@ const ja: Record<Key, string> = {
   'wallet.testBuyer': 'テスト用：購入者',
   'wallet.setName': '表示名を設定',
   'wallet.disconnect': '切断',
+  'wallet.chain': 'ミントするチェーン',
   footer: 'pixmint by mederu.art · 絵はすべてチェーンの中にあります',
 
   'tool.pen': 'ペン',
