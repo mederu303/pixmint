@@ -54,12 +54,14 @@ export function MintPanel({ grid, bg, onFit, usedStamps = [] }: { grid: PixGrid;
   // 絵 → PXM（チェーンに置くバイト列）。上限超えはここで分かる
   const encoded = useMemo(() => {
     try {
-      const bytes = encodePxm(flatten(grid, bg), bg);
+      // スタンプとして出すときは背景色を色 0 に（Pix で押すと色 0 が透明になる）
+      const stampMode = asStampOn && mintVer(chainId) === 4 && (grid.length === 8 || grid.length === 16);
+      const bytes = encodePxm(flatten(grid, bg), bg, { bgFirst: stampMode });
       return { bytes, info: validatePxm(bytes), svg: pxmToSvg(bytes), error: null as string | null };
     } catch (e) {
       return { bytes: null, info: null, svg: null, error: (e as Error).message };
     }
-  }, [grid, bg]);
+  }, [grid, bg, asStampOn, chainId]);
 
   // 上限を超えているときのラン数（encodePxm は上限で止まるので数え直す）
   const overRuns = useMemo(() => (encoded.bytes ? 0 : countRuns(grid, bg)), [encoded.bytes, grid, bg]);

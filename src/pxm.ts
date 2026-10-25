@@ -33,7 +33,9 @@ function parseHex(c: string): [number, number, number] {
  * 合成済みのグリッド（全マス #rrggbb、null は bgColor で埋める）を PXM に。
  * レイヤー合成は atelierX の exportSVG と同じ前処理を呼び出し側でやってから渡す。
  */
-export function encodePxm(grid: Grid, bgColor = '#000000'): Uint8Array {
+/** opts.bgFirst: 背景色（空いたマス）を必ず色 0 にする。スタンプ用（Pix で押すとき色 0 を透明にするので、
+ *  いちばん多い色ではなく「空いていたマス」が透明になるように。使っていなくても色 0 に入れる） */
+export function encodePxm(grid: Grid, bgColor = '#000000', opts: { bgFirst?: boolean } = {}): Uint8Array {
   const size = grid.length;
   if (size < 1 || size > PXM_MAX_SIZE) throw new Error(`pxm: size ${size} out of range`);
   const cells: string[] = [];
@@ -49,6 +51,7 @@ export function encodePxm(grid: Grid, bgColor = '#000000'): Uint8Array {
   // 背景 = いちばん多い色。残りは最初に出てきた順
   let bg = cells[0];
   for (const [col, k] of count) if (k > (count.get(bg) ?? 0)) bg = col;
+  if (opts.bgFirst) bg = bgColor.toLowerCase();
   const palette = [bg, ...[...count.keys()].filter((c) => c !== bg)];
   if (palette.length > PXM_MAX_COLORS) {
     throw new Error(`pxm: ${palette.length} colors (max ${PXM_MAX_COLORS})`);

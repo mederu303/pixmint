@@ -164,8 +164,18 @@ export interface StampView {
 }
 const stampCache = new Map<number, { total: bigint; seen: Map<bigint, boolean>; list: StampView[] }>();
 
-/** v4 のスタンプ（新しい順）。読んだ分は覚えておき、増えた分だけ読む */
-export async function readStamps(chainId: number): Promise<StampView[]> {
+/** v4 のスタンプ（新しい順）。読んだ分は覚えておき、増えた分だけ読む。
+ *  同時に呼ばれても 1 回だけ読む（開発中は React が effect を 2 回動かすので、二重に足していた） */
+const stampLoading = new Map<number, Promise<StampView[]>>();
+export function readStamps(chainId: number): Promise<StampView[]> {
+  let p = stampLoading.get(chainId);
+  if (!p) {
+    p = loadStamps(chainId).finally(() => stampLoading.delete(chainId));
+    stampLoading.set(chainId, p);
+  }
+  return p;
+}
+async function loadStamps(chainId: number): Promise<StampView[]> {
   const c = client(chainId);
   const address = addr(chainId, 4);
   const abi = PIXMINT4_ABI;
