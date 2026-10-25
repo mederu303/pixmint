@@ -76,14 +76,16 @@ export function Wallet() {
   const { address, isConnected, chainId: walletChain } = useAccount();
   const { connect, connectors, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync, isPending: switching } = useSwitchChain();
   const mintChain = useMintChain();
   const [open, setOpen] = useState(false);
-  /** ミントするチェーンを変えて、ウォレットのネットワークも合わせる（Pix がスタンプの確認で止めたら何もしない） */
+  /** ミントするチェーンを変えて、ウォレットのネットワークも合わせる（Pix がスタンプの確認で止めたら何もしない）。
+   *  ウォレットへの切り替えの依頼は 1 つずつ（重ねて送ると MetaMask が中でエラーを出すことがある・2026-10-25）。
+   *  断られても・失敗してもミントするチェーンは変わったまま（ミントのときにもう一度切り替えを頼む） */
   const pickChain = (id: number) => {
     if (!requestMintChain(id)) return;
-    if (isConnected && walletChain !== id) switchChain({ chainId: id });
     setOpen(false);
+    if (isConnected && walletChain !== id && !switching) switchChainAsync({ chainId: id }).catch(() => {});
   };
   const chainItems = PIX_CHAINS.length > 1 && (
     <div className="menu-chains" role="group" aria-label={t('wallet.chain')}>
