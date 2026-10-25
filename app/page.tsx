@@ -406,7 +406,7 @@ export default function Studio() {
 
         {(tool === 'box' || tool === 'oval') && (
           <div className="sect stamps">
-            <div className="shape-opts">
+            <div className="shape-opts" title={t('shape.hint')}>
               <button className={`tool ${!shapeFill ? 'on' : ''}`} onClick={() => setShapeFill(false)} aria-pressed={!shapeFill}>
                 {t('shape.outline')}
               </button>
@@ -414,12 +414,12 @@ export default function Studio() {
                 {t('shape.filled')}
               </button>
             </div>
-            <span className="note">{t('shape.hint')}</span>
           </div>
         )}
         {tool === 'stamp' && (
           <div className="sect stamps">
-            <div className="stamp-opts">
+            {/* 操作の説明は文字で出さず、ボタンにかざすと出す（くわしくはヘルプ） */}
+            <div className="stamp-opts" title={t('stamp.hint')}>
               <button className="tool" onClick={() => setStampRot((n) => (n + 1) % 4)} title={`${t('stamp.rotate')} (R)`}>
                 ⟳
               </button>
@@ -432,7 +432,6 @@ export default function Studio() {
                 </button>
               ))}
             </div>
-            <span className="note">{t('stamp.hint')}</span>
           </div>
         )}
 
@@ -493,8 +492,7 @@ export default function Studio() {
             </div>
             <div className="sect stamps stamp-list">
               <span className="stamp-head">{t('stamp.official')}</span>
-              {/* 今の色が暗いと、染まった部分と輪郭が暗い枠に溶けるので、見本だけ明るい下地にする */}
-              <div className={`stamp-grid ${isDark(color) ? 'light' : ''}`}>
+              <div className="stamp-grid">
                 {STAMPS.map((x) => (
                   <button
                     key={x.id}
