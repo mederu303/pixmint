@@ -34,7 +34,7 @@ pixmint に「スタンプ」機能が加わりました。作家が描いたド
 ・スタンプの名前は 32 バイト（日本語なら 10 文字）までです。
 ・スタンプの番号はチェーンごとに別々です。Base のスタンプは Base の作品にだけ、Ethereum のスタンプは Ethereum の作品にだけ記録されます。Pix では、描く前にミントするチェーンを選び、一覧にもそのチェーンのスタンプだけが並びます。
 ・分配があるのは pixmint の中での売買です。OpenSea など外のマーケットでは、今までどおり作品の作家のロイヤリティだけです。
-・スタンプの登録の手数料は、今は無料です。大量の登録など荒らしが出た場合は、上限 0.01 ETH の範囲で設定することがあります。
+・スタンプを出すときは、登録の手数料 0.001 ETH がかかります（大量の登録などの荒らし対策。上限は 0.01 ETH で、コントラクトで決まっています）。ふつうの作品のミントは今までどおり無料です。
 
 ピクセルを手で写せば、記録されずに同じ絵を描けてしまいます。pixmint ができるのは、スタンプのボタンで押したものを自動で記録し、作品ページに元のスタンプと作者を出すところまでです。作者が見える形で、使い合う文化を育てていければと思います。
 
@@ -114,7 +114,7 @@ The rules
 ・Stamp names are up to 32 bytes.
 ・Stamp numbers are separate on each chain. Base stamps are recorded on Base works, Ethereum stamps on Ethereum works. In Pix you choose the chain before you draw, and the list shows only that chain's stamps.
 ・The split happens on sales inside pixmint. On outside marketplaces such as OpenSea, only the work artist's royalty applies, as before.
-・Minting a stamp is free for now. If spam appears, a fee of up to 0.01 ETH may be set.
+・Minting a stamp costs a 0.001 ETH registration fee, to keep spam out (the contract caps it at 0.01 ETH). Minting ordinary works stays free.
 
 Anyone can copy pixels by hand, and those copies are not recorded. What pixmint can do is record every stamp you place with the stamp tool, pay for it automatically, and show the original stamp and its artist on the work's page.
 

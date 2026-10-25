@@ -63,6 +63,8 @@ owner は 0xC9DE84e5249C318D96DDBFF2f63ded08ED480C08。どちらも siteURL = ht
 | Base | `0x14c3b1972ecb84069399786893dbb1c949ae49b1` | 0x1839…a4f3（約 0.000029 ETH） | 0x92a0…7bad |
 | Ethereum | `0x53a5187f1f3c6b87582c97138a83da19fcaa7793` | 0x83d3…4485（約 0.00021 ETH） | 0x02c0…5917 |
 
+**スタンプの手数料**: 2026-10-25 に両方とも `setStampPrice(0.001 ETH)`（Base 0x2b4a…5611・Ethereum 0xff19…9331）。ふつうの作品のミントは 0 のまま。
+
 Vercel: production に `NEXT_PUBLIC_PIXMINT4_8453`・`NEXT_PUBLIC_PIXMINT4_1`、preview にテストネットの 2 つ。
 
 ## テストネット（2026-10-25）
