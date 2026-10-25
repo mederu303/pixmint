@@ -67,6 +67,8 @@ contract PixMint4 is ERC721, Ownable2Step, ReentrancyGuard {
     uint256 public constant MAX_STAMPS = 16;
     /// @dev スタンプの名前。UTF-8 32 bytes（日本語なら10文字）
     uint256 public constant MAX_STAMP_NAME = 32;
+    /// @dev スタンプの手数料の上限（owner でも超えられない）
+    uint256 public constant MAX_STAMP_PRICE = 0.01 ether;
 
     struct Work {
         address creator;
@@ -80,6 +82,8 @@ contract PixMint4 is ERC721, Ownable2Step, ReentrancyGuard {
 
     uint256 public totalMinted;
     uint256 public mintPrice;
+    /// @notice スタンプを出すときの手数料（荒らし対策。ふつうの作品の mintPrice とは別。最初は 0）
+    uint256 public stampPrice;
     bool public mintOpen = true;
     uint16 public feeBps = 250; // mederu 手数料 2.5%（販売時）
     /// @notice mint 手数料と販売手数料のうち、まだ引き出していない分
@@ -121,7 +125,7 @@ contract PixMint4 is ERC721, Ownable2Step, ReentrancyGuard {
             if (s <= prev || s > totalMinted || !works[s].stamp) revert BadStamps();
             prev = s;
         }
-        (id, ) = _mintWork(pxm, title, royaltyBps, false);
+        (id, ) = _mintWork(pxm, title, royaltyBps, false, mintPrice);
         if (stamps.length != 0) {
             uint32[] storage st = _stamps[id];
             for (uint256 i; i < stamps.length; ++i) st.push(uint32(stamps[i]));
@@ -135,17 +139,17 @@ contract PixMint4 is ERC721, Ownable2Step, ReentrancyGuard {
         // スタンプの名前は短く（作品の trait にスタンプの数だけ並ぶので、tokenURI を軽く保つ）
         if (bytes(name).length > MAX_STAMP_NAME) revert BadTitle();
         uint8 size;
-        (id, size) = _mintWork(pxm, name, royaltyBps, true);
+        (id, size) = _mintWork(pxm, name, royaltyBps, true, stampPrice);
         if (size != 8 && size != 16) revert BadData();
         emit StampMinted(id, msg.sender, works[id].official);
     }
 
-    function _mintWork(bytes calldata pxm, string calldata title, uint16 royaltyBps, bool isStamp)
+    function _mintWork(bytes calldata pxm, string calldata title, uint16 royaltyBps, bool isStamp, uint256 price)
         private
         returns (uint256 id, uint8 size)
     {
         if (!mintOpen) revert MintClosed();
-        if (msg.value != mintPrice) revert WrongPrice();
+        if (msg.value != price) revert WrongPrice();
         if (royaltyBps > MAX_ROYALTY_BPS) revert BadRoyalty();
         _validateTitle(bytes(title));
         uint8 colors;
@@ -520,6 +524,12 @@ contract PixMint4 is ERC721, Ownable2Step, ReentrancyGuard {
 
     function setMintPrice(uint256 price) external onlyOwner {
         mintPrice = price;
+    }
+
+    /// @notice スタンプの手数料（0〜0.01 ETH）。荒らしが出たら上げる
+    function setStampPrice(uint256 price) external onlyOwner {
+        if (price > MAX_STAMP_PRICE) revert WrongPrice();
+        stampPrice = price;
     }
 
     function setFeeBps(uint16 bps) external onlyOwner {

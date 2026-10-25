@@ -72,7 +72,13 @@ try {
 
   // 2. スタンプ: 公式（owner）と、作家 A の 16×16
   const off = idOf(await send(owner, 'mintStamp', [pxm(16, ['#ff4fd8', '#ffffff']), 'heart', 0]));
-  const sa = idOf(await send(W.A, 'mintStamp', [pxm(16, ['#7cffcb', '#2b2d42']), 'e2e neko', 500]));
+  // スタンプの手数料（荒らし対策）: owner が少しだけ付けて、A が払って出す → 0 に戻す
+  const fee = parseEther('0.00001');
+  await send(owner, 'setStampPrice', [fee]);
+  const pf = await read('platformBalance');
+  const sa = idOf(await send(W.A, 'mintStamp', [pxm(16, ['#7cffcb', '#2b2d42']), 'e2e neko', 500], fee));
+  check(`A paid the stamp fee ${formatEther(fee)} ETH`, (await read('platformBalance')) - pf === fee);
+  await send(owner, 'setStampPrice', [0n]);
   const wOff = await read('works', [off]);
   const wA = await read('works', [sa]);
   check(`official stamp #${off} (stamp=${wOff[5]}, official=${wOff[6]})`, wOff[5] && wOff[6]);

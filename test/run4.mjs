@@ -103,6 +103,17 @@ check('reject 32x32 stamp', !(await tx('mintStamp', [art(32), 'x', 0], { from: b
 check('reject stamp name with newline', !(await tx('mintStamp', [art(16), 'a\nb', 0], { from: bob })).ok);
 check('reject stamp name 33 bytes', !(await tx('mintStamp', [art(16), 'x'.repeat(33), 0], { from: bob })).ok);
 check('accept stamp name 30 bytes (日本語10文字)', (await tx('mintStamp', [art(16), 'あ'.repeat(10), 0], { from: dave })).ok);
+// スタンプの手数料（荒らし対策）
+check('stampPrice starts at 0', (await view('stampPrice')).v === 0n);
+check('non-owner cannot set stampPrice', !(await tx('setStampPrice', [E / 1000n], { from: bob })).ok);
+check('stampPrice cap 0.01 ETH', !(await tx('setStampPrice', [E / 100n + 1n])).ok);
+check('owner sets stampPrice 0.001 ETH', (await tx('setStampPrice', [E / 1000n])).ok);
+check('stamp without the fee reverts', !(await tx('mintStamp', [art(16), 'free?', 0], { from: bob })).ok);
+const pf0 = (await view('platformBalance')).v;
+check('stamp with the fee', (await tx('mintStamp', [art(16), 'paid', 0], { from: bob, value: E / 1000n })).ok);
+check('fee goes to platformBalance', (await view('platformBalance')).v - pf0 === E / 1000n);
+check('normal works still use mintPrice (0), not stampPrice', (await tx('mint', [art(16), '', 0, []], { from: bob })).ok);
+await tx('setStampPrice', [0n]);
 const sm = await meta(BOB);
 check('stamp tokenURI has Type: Stamp', sm.attributes.some((a) => a.trait_type === 'Type' && a.value === 'Stamp'));
 check('stamp name round-trips (escaped)', sm.name === 'neko "paw"');
