@@ -79,4 +79,12 @@ if (r.status !== 'success') {
 const raw = await pub.request({ method: 'eth_getTransactionReceipt', params: [hash] });
 const fee = r.gasUsed * r.effectiveGasPrice + BigInt(raw.l1Fee ?? 0);
 console.log(`${v4 ? 'PixMint4' : 'PixMint'}: ${r.contractAddress}  (gas ${r.gasUsed}, fee ${formatEther(fee)} ETH, block ${r.blockNumber})`);
-console.log(`\n.env.local に:\nNEXT_PUBLIC_PIXMINT_${chainId}=${r.contractAddress}`);
+// v4 は作品ページが /v4/<chainId>/<id> なので、tokenURI の external_url もそこを指すようにする（owner = デプロイした鍵のときだけ送れる）
+if (v4) {
+  if (owner.toLowerCase() === account.address.toLowerCase()) {
+    const h = await wallet.writeContract({ address: r.contractAddress, abi: art.abi, functionName: 'setSiteURL', args: ['https://pixmint.mederu.art/v4'] });
+    await pub.waitForTransactionReceipt({ hash: h });
+    console.log('siteURL → https://pixmint.mederu.art/v4');
+  } else console.log('※ owner から setSiteURL("https://pixmint.mederu.art/v4") を送ってください');
+}
+console.log(`\n.env.local に:\nNEXT_PUBLIC_PIXMINT${v4 ? '4' : ''}_${chainId}=${r.contractAddress}`);
