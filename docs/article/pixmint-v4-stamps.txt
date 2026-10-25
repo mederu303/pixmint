@@ -1,0 +1,155 @@
+pixmint スタンプ機能の追加とコントラクトアップデートのお知らせ
+
+pixmint に「スタンプ」機能が加わりました。作家が描いたドット絵をスタンプとして出し、ほかの作家がそれを使って描けます。スタンプを使った作品が売れると、売値の一部がスタンプの作者に届きます。
+
+この機能のために、pixmint のコントラクトを新しい版（v4）に更新しました。これまでの作品は「Genesis」として、そのまま残ります。
+
+[画像: スタンプを使った作品と、作品ページの「使ったスタンプ」]
+
+
+スタンプとは
+
+8×8 か 16×16 で描いた絵を、「スタンプとして出す」にチェックを入れてミントすると、スタンプになります。スタンプも、ふつうの作品と同じフルオンチェーンの NFT です。売り買いもできます。
+
+ミントしたスタンプは、Pix のスタンプの一覧の「みんなのスタンプ」に並びます。誰でも選んで、キャンバスに押して使えます。回転・反転・2 倍、Option を押しながらの左右対称も、公式スタンプと同じように使えます。みんなのスタンプは、作家が描いた元の色のまま押されます。
+
+
+使われると、作者に届く
+
+スタンプを使った作品をミントすると、使ったスタンプがチェーンに記録されます。Pix のスタンプのボタンで押したものは自動で集めるので、特別な操作は要りません。
+
+その作品が pixmint で売れると、売値の 8% を、使ったスタンプの作者の人数で等分します。mederu.ART の素材（material）と同じ考え方です。
+
+例: 作家 A のスタンプと作家 B のスタンプを使った作品が、1 ETH で売れたとき
+・作品の作家（一次販売）: 89.5%
+・スタンプの作者 A・B: 4% ずつ（合わせて 8%）
+・mederu の手数料: 2.5%
+
+転売のときも、毎回スタンプの作者に届きます（作品の作家のロイヤリティも今までどおり）。
+
+決まりごと
+・公式スタンプ（mederu が出したもの）は、使っても誰にも払われません。手数料と二重になるためです。
+・自分のスタンプを自分の作品に使った分は、自分には払われません。売り手がスタンプの作者のときも、その人は外れます。
+・1 つの作品に記録できるスタンプは 16 個までです。どんな作品でも、コントラクトが絵とデータを組み立てられる範囲に収めるためです。
+・スタンプの名前は 32 バイト（日本語なら 10 文字）までです。
+・スタンプの番号はチェーンごとに別々です。Base のスタンプは Base の作品にだけ、Ethereum のスタンプは Ethereum の作品にだけ記録されます。Pix では、描く前にミントするチェーンを選び、一覧にもそのチェーンのスタンプだけが並びます。
+・分配があるのは pixmint の中での売買です。OpenSea など外のマーケットでは、今までどおり作品の作家のロイヤリティだけです。
+・スタンプの登録の手数料は、今は無料です。大量の登録など荒らしが出た場合は、上限 0.01 ETH の範囲で設定することがあります。
+
+ピクセルを手で写せば、記録されずに同じ絵を描けてしまいます。pixmint ができるのは、スタンプのボタンで押したものを自動で記録し、作品ページに元のスタンプと作者を出すところまでです。作者が見える形で、使い合う文化を育てていければと思います。
+
+
+コントラクトの更新（v4）
+
+スタンプの記録と分配は、コントラクトの中で行う必要があります。今までのコントラクト（v3）には、その仕組みを足すことができないため、新しいコントラクト（v4）を置きました。
+
+v4 のコントラクト（どちらもソースを Sourcify で公開しています）
+・Base: 0x14c3b1972ecb84069399786893dbb1c949ae49b1
+・Ethereum: 0x53a5187f1f3c6b87582c97138a83da19fcaa7793
+
+これからのミントは、Base も Ethereum も v4 になります。絵とデータをチェーンに置き、コントラクトがその場で SVG を組み立てる「フルオンチェーン」の仕組みは、v4 でも同じです。
+
+
+これまでの作品は「Genesis」に
+
+v3 のコントラクトは、新しいミントを閉じて、最初期の作品だけの「Genesis」コレクションとして残します。
+
+・作品はそのままです。絵も、データも、持ち主も変わりません。
+・pixmint の中での売り買いも、今までどおりできます。
+・OpenSea のコレクションもそのままです。v4 の作品は、OpenSea では新しいコレクションとして表示されます。
+・pixmint の MINTED では、Genesis と v4 の作品を一緒に新しい順に並べます。
+
+v3 のコントラクト（Genesis）
+・Base: 0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8
+・Ethereum: 0xc8c425587a818fbfff287b59991fcf471fa47dd8
+
+
+ほかの更新
+
+・ウォレットのメニューから、ミントするチェーン（Ethereum / Base）を選べるようになりました。選ぶとウォレットのネットワークも切り替わります。
+・作品ページに「使っている色」を表示するようにしました。チェーンのデータに入っている色そのままで、押すと色コードをコピーできます。
+・「X でシェア」から投稿すると、ツイートの中で作品がその場でコントラクトから読まれて表示されます（mederu.ART の medeLink と同じ仕組み）。
+
+
+pixmint
+https://pixmint.mederu.art
+
+
+────────────────────────────────
+
+
+pixmint: stamps, and a contract update
+
+pixmint now has stamps. Artists can mint a pixel drawing as a stamp, and other artists can stamp it into their own work. When a work that uses stamps sells, part of the price goes to the stamp artists.
+
+To make this possible, pixmint moves to a new contract, v4. Everything minted so far stays exactly where it is, as the Genesis collection.
+
+[IMAGE: a work made with stamps, and the "Stamps used" section of its page]
+
+
+What a stamp is
+
+Draw something at 8×8 or 16×16, tick "Mint as a stamp", and mint. A stamp is a fully on-chain NFT like any other pixmint work, and it can be bought and sold.
+
+Once minted, it appears under Community in Pix's stamp list. Anyone can pick it and stamp it onto the canvas, with rotate, flip, 2× and Option-mirror just like the official stamps. Community stamps keep the colors their artist drew.
+
+
+Used stamps pay their artists
+
+When you mint a work, the stamps you used are recorded on-chain. Pix collects them automatically as you stamp, so there is nothing extra to do.
+
+When that work sells on pixmint, 8% of the price is split equally among the artists of the stamps it uses, the same model as the materials on mederu.ART.
+
+Example: a work using one stamp by A and one by B sells for 1 ETH
+・The work's artist (first sale): 89.5%
+・Stamp artists A and B: 4% each (8% together)
+・mederu fee: 2.5%
+
+Resales pay the stamp artists every time, alongside the work artist's royalty as before.
+
+The rules
+・Official stamps (minted by mederu) pay no one, so mederu is never paid twice.
+・You are not paid for your own stamps in your own work, and a seller who is also a stamp artist is left out of that sale's split.
+・A work can record up to 16 stamps. This keeps every possible work within what the contract can render.
+・Stamp names are up to 32 bytes.
+・Stamp numbers are separate on each chain. Base stamps are recorded on Base works, Ethereum stamps on Ethereum works. In Pix you choose the chain before you draw, and the list shows only that chain's stamps.
+・The split happens on sales inside pixmint. On outside marketplaces such as OpenSea, only the work artist's royalty applies, as before.
+・Minting a stamp is free for now. If spam appears, a fee of up to 0.01 ETH may be set.
+
+Anyone can copy pixels by hand, and those copies are not recorded. What pixmint can do is record every stamp you place with the stamp tool, pay for it automatically, and show the original stamp and its artist on the work's page.
+
+
+The contract update (v4)
+
+Recording stamps and splitting sales has to happen inside the contract, and the previous contract (v3) cannot be extended to do it. So pixmint now runs on a new contract.
+
+v4 contracts (source published on Sourcify)
+・Base: 0x14c3b1972ecb84069399786893dbb1c949ae49b1
+・Ethereum: 0x53a5187f1f3c6b87582c97138a83da19fcaa7793
+
+New mints on both Base and Ethereum go to v4. The fully on-chain design is unchanged: the pixels live in chain state and the contract assembles the SVG on request.
+
+
+Earlier works become Genesis
+
+The v3 contracts are closed to new mints and stay as Genesis, the collection of pixmint's earliest works.
+
+・The works are untouched: same images, same data, same owners.
+・They can still be bought and sold on pixmint.
+・Their OpenSea collection stays as it is. v4 works appear on OpenSea as a new collection.
+・MINTED on pixmint shows Genesis and v4 works together, newest first.
+
+v3 contracts (Genesis)
+・Base: 0xb8d3291b707d2bd3e2ad57bd328c37ea2d2845a8
+・Ethereum: 0xc8c425587a818fbfff287b59991fcf471fa47dd8
+
+
+Also new
+
+・Choose the chain you mint on (Ethereum / Base) from the wallet menu. Your wallet's network switches with it.
+・Work pages show the colors the piece uses, straight from its on-chain data. Click one to copy its code.
+・Posts from "Share on X" show the work inside the tweet, read live from the contract (the same idea as medeLink on mederu.ART).
+
+
+pixmint
+https://pixmint.mederu.art
