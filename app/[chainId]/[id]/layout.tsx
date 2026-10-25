@@ -1,26 +1,13 @@
-// 作品ページのタイトルと説明（ページ本体はクライアントで読むので、カード用はここでサーバーから読む）
+// 作品ページのタイトルと説明（ページ本体はクライアントで読むので、カード用はここでサーバーから読む。中身は lib/workCard.tsx）
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { readWork } from '../../../lib/contract';
-import { artistName } from '../../../lib/names';
+import { workMetadata } from '../../../lib/workCard';
 
 export const revalidate = 3600;
 
 export async function generateMetadata({ params }: { params: Promise<{ chainId: string; id: string }> }): Promise<Metadata> {
-  const { chainId: c, id } = await params;
-  try {
-    const w = await readWork(Number(c), BigInt(id));
-    const title = `${w.title || `#${id}`} by ${await artistName(w.creator, Number(c))}`;
-    const description = 'Pixel art stored fully on-chain — no IPFS, no server. pixmint by mederu.art';
-    return {
-      title: `${title} — pixmint`,
-      description,
-      openGraph: { type: 'website', url: `/${c}/${id}`, siteName: 'pixmint', title, description },
-      twitter: { card: 'summary_large_image', title, description },
-    };
-  } catch {
-    return {};
-  }
+  const { chainId, id } = await params;
+  return workMetadata(chainId, id, 3);
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

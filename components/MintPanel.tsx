@@ -6,8 +6,8 @@ import { formatEther, formatGwei, parseEventLogs } from 'viem';
 import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import { Wallet } from './Header';
 import { encodePxm, pxmToSvg, validatePxm, PXM_MAX_RUNS } from '../src/pxm';
-import { LABEL, PIX_CHAINS, pixChain } from '../lib/chains';
-import { PIXMINT_ABI, client, estimateMintGas, findSameArt, readNum, svgUrl } from '../lib/contract';
+import { LABEL, PIX_CHAINS, deployment, mintVer, workPath } from '../lib/chains';
+import { abiOf, client, estimateMintGas, findSameArt, readNum, svgUrl } from '../lib/contract';
 import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cost';
 import { flatten, type PixGrid } from '../lib/pix';
 import { countRuns } from '../lib/convert';
@@ -15,16 +15,34 @@ import { useI18n } from '../lib/i18n';
 
 const ROYALTIES = [0, 250, 500, 750, 1000];
 const TITLE_MAX = 96;
+const STAMP_NAME_MAX = 32; // コントラクトの MAX_STAMP_NAME
+const MAX_STAMPS = 16; // コントラクトの MAX_STAMPS
 const enc = new TextEncoder();
 const toHex = (b: Uint8Array) => ('0x' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')) as `0x${string}`;
 
-export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFit?: () => void }) {
+/** 使ったスタンプ（v4。チェーンごとの番号）。Pix がスタンプのボタンで押したものを集める */
+export type UsedStamp = { chainId: number; id: bigint; title: string };
+
+export function MintPanel({ grid, bg, onFit, usedStamps = [] }: { grid: PixGrid; bg: string; onFit?: () => void; usedStamps?: UsedStamp[] }) {
   const { t, lang } = useI18n();
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [royalty, setRoyalty] = useState(500);
   const [chainId, setChainId] = useState<number>(PIX_CHAINS[0]?.chain.id ?? 0);
   const [mintPrice, setMintPrice] = useState<bigint>(0n);
+  const [stampPrice, setStampPrice] = useState<bigint>(0n);
+  const ver = mintVer(chainId);
+  // スタンプとして出す（v4・8×8 か 16×16 のときだけ選べる）
+  const [asStampOn, setAsStamp] = useState(false);
+  const canStamp = ver === 4 && (grid.length === 8 || grid.length === 16);
+  const asStamp = canStamp && asStampOn;
+  // このチェーンで記録するスタンプ（小さい順・重複なし・16 個まで）。ほかのチェーンのスタンプは記録できない
+  const stampIds = useMemo(
+    () => [...new Set(usedStamps.filter((s) => s.chainId === chainId).map((s) => s.id))].sort((a, b) => (a < b ? -1 : 1)),
+    [usedStamps, chainId],
+  );
+  const otherChainStamps = usedStamps.filter((s) => s.chainId !== chainId);
+  const tooManyStamps = stampIds.length > MAX_STAMPS;
   const [status, setStatus] = useState<{ kind: 'idle' | 'busy' | 'ok' | 'bad'; text?: string; id?: bigint }>({
     kind: 'idle',
   });
@@ -47,12 +65,13 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
   const overRuns = useMemo(() => (encoded.bytes ? 0 : countRuns(grid, bg)), [encoded.bytes, grid, bg]);
 
   const titleBytes = enc.encode(title).length;
-  const titleBad = titleBytes > TITLE_MAX || /[\u0000-\u001f\u007f]/.test(title);
+  const titleBad = titleBytes > (asStamp ? STAMP_NAME_MAX : TITLE_MAX) || /[\u0000-\u001f\u007f]/.test(title) || (asStamp && !title.trim());
 
   useEffect(() => {
     if (!chainId) return;
     let live = true;
-    readNum(chainId, 'mintPrice').then((p) => live && setMintPrice(p)).catch(() => {});
+    readNum(chainId, 'mintPrice', mintVer(chainId)).then((p) => live && setMintPrice(p)).catch(() => {});
+    if (mintVer(chainId) === 4) readNum(chainId, 'stampPrice', 4).then((p) => live && setStampPrice(p)).catch(() => {});
     return () => {
       live = false;
     };
@@ -63,25 +82,40 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
     () => (encoded.bytes && !titleBad ? ([toHex(encoded.bytes), title.trim(), royalty] as const) : null),
     [encoded.bytes, titleBad, title, royalty],
   );
-  const costs = useMintCosts(mintArgs, mintPrice, address);
+  // v4 のチェーンでは v4 に送る（スタンプとして・使ったスタンプを付けて）
+  const callFor = (id: number) => {
+    const v = mintVer(id);
+    if (v !== 4 || !mintArgs) return undefined;
+    const stamping = asStamp && id === chainId;
+    const ids = [...new Set(usedStamps.filter((s) => s.chainId === id).map((s) => s.id))].sort((a, b) => (a < b ? -1 : 1)).slice(0, MAX_STAMPS);
+    return {
+      address: deployment(id, 4)!.address,
+      abi: abiOf(4),
+      functionName: stamping ? 'mintStamp' : 'mint',
+      args: stamping ? [...mintArgs] : [...mintArgs, ids],
+      value: stamping ? stampPrice : mintPrice,
+    };
+  };
+  const payValue = asStamp ? stampPrice : mintPrice;
+  const costs = useMintCosts(mintArgs, mintPrice, address, callFor, `${asStamp}|${stampPrice}|${usedStamps.map((s) => `${s.chainId}:${s.id}`).join()}`);
   const price = useEthPrice();
   const cur = costs[chainId];
   // 聞けないときだけ式で概算
   const gas = cur?.gas ?? (encoded.bytes ? BigInt(estimateMintGas(encoded.bytes.length, titleBytes)) : 0n);
   // ここは実際にウォレットで払う額（テストネットならテストネットのガス価格）。下の比べる欄はメインネット換算
   const gasPrice = cur?.ownGasPrice ?? null;
-  const fee = cur?.ownTotal != null ? cur.ownTotal - mintPrice : gasPrice != null ? gas * gasPrice : null;
+  const fee = cur?.ownTotal != null ? cur.ownTotal - payValue : gasPrice != null ? gas * gasPrice : null;
   // 同じ絵がこのチェーンでもう mint されていないか（絵・チェーンが変わったら 0.8 秒待って調べる。mint の直後にも調べ直す）
   const [same, setSame] = useState<bigint[]>([]);
   const [sameTick, setSameTick] = useState(0);
   useEffect(() => {
     setSame([]);
-    if (!encoded.bytes || !encoded.info || !pixChain(chainId)) return;
+    if (!encoded.bytes || !encoded.info || !deployment(chainId, mintVer(chainId))) return;
     let live = true;
     const { size, colors } = encoded.info;
     const hex = toHex(encoded.bytes);
     const timer = setTimeout(() => {
-      findSameArt(chainId, hex, size, colors)
+      findSameArt(chainId, hex, size, colors, mintVer(chainId))
         .then((ids) => live && setSame(ids))
         .catch(() => {});
     }, 800);
@@ -96,35 +130,34 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
     if (!encoded.bytes) return;
     if (same.length && !window.confirm(t('mint.sameConfirm', { ids: same.map((i) => `#${i}`).join(', '), chain: LABEL[chainId] ?? '' })))
       return;
-    const p = pixChain(chainId)!;
+    const call = callFor(chainId) ?? {
+      address: deployment(chainId, 3)!.address,
+      abi: abiOf(3),
+      functionName: 'mint',
+      args: [toHex(encoded.bytes), title.trim(), royalty],
+      value: mintPrice,
+    };
     try {
       setStatus({ kind: 'busy', text: t('mint.confirm') });
       if (walletChain !== chainId) await switchChainAsync({ chainId });
-      const hash = await writeContractAsync({
-        chainId,
-        address: p.address,
-        abi: PIXMINT_ABI,
-        functionName: 'mint',
-        args: [toHex(encoded.bytes), title.trim(), royalty],
-        value: mintPrice,
-      });
+      const hash = await writeContractAsync({ chainId, ...call });
       setStatus({ kind: 'busy', text: t('mint.writing') });
       const receipt = await client(chainId).waitForTransactionReceipt({ hash });
       if (receipt.status !== 'success') throw new Error(t('mint.failed'));
-      const ev = parseEventLogs({ abi: PIXMINT_ABI, logs: receipt.logs, eventName: 'Minted' })[0] as
+      const ev = parseEventLogs({ abi: abiOf(ver), logs: receipt.logs, eventName: 'Minted' })[0] as
         | { args: { id: bigint } }
         | undefined;
       setStatus({ kind: 'ok', text: ev ? t('mint.opening') : t('mint.done'), id: ev?.args.id });
       setSameTick((n) => n + 1);
       // 少し見せてから作品ページへ（描いた絵はこのブラウザに残っている）
-      if (ev) setTimeout(() => router.push(`/${chainId}/${ev.args.id}`), 1200);
+      if (ev) setTimeout(() => router.push(workPath(chainId, ev.args.id, ver)), 1200);
     } catch (e) {
       const msg = (e as { shortMessage?: string; message: string }).shortMessage ?? (e as Error).message;
       setStatus({ kind: 'bad', text: msg.split('\n')[0] });
     }
   }
 
-  const ready = !!encoded.bytes && !titleBad && !!chainId && status.kind !== 'busy';
+  const ready = !!encoded.bytes && !titleBad && !tooManyStamps && !!chainId && status.kind !== 'busy';
 
   return (
     <div className="mintcol">
@@ -167,11 +200,26 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
       <div className="panel stack">
         <label className="stack" style={{ gap: 4 }}>
           <span className="note lbl">
-            {t('mint.title')}
-            <span className={titleBad ? 'bad' : ''}>{t('mint.bytes', { n: titleBytes, max: TITLE_MAX })}</span>
+            {asStamp ? t('mint.stampName') : t('mint.title')}
+            <span className={titleBad ? 'bad' : ''}>{t('mint.bytes', { n: titleBytes, max: asStamp ? STAMP_NAME_MAX : TITLE_MAX })}</span>
           </span>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('mint.titlePh')} />
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={asStamp ? t('mint.stampNamePh') : t('mint.titlePh')} />
         </label>
+
+        {canStamp && (
+          <label className="row stamp-toggle" title={t('mint.asStampHint')}>
+            <input type="checkbox" checked={asStampOn} onChange={(e) => setAsStamp(e.target.checked)} />
+            <span>{t('mint.asStamp')}</span>
+          </label>
+        )}
+        {asStamp && <p className="note">{t('mint.asStampHint')}</p>}
+        {!asStamp && stampIds.length > 0 && (
+          <p className={`note ${tooManyStamps ? 'bad' : ''}`}>
+            {t('mint.stampsRecorded', { n: stampIds.length, max: MAX_STAMPS })}{' '}
+            {usedStamps.filter((s) => s.chainId === chainId).map((s) => s.title).join(' · ')}
+          </p>
+        )}
+        {!asStamp && otherChainStamps.length > 0 && <p className="note warn">{t('mint.stampsOtherChain', { n: otherChainStamps.length })}</p>}
 
         <div className="stack" style={{ gap: 4 }}>
           <span className="note">{t('mint.royalty')}</span>
@@ -205,7 +253,7 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
 
         <div className="meta">
           <span>{t('mint.fee')}</span>
-          <b>{mintPrice === 0n ? t('mint.free') : `${formatEther(mintPrice)} ETH`}</b>
+          <b>{payValue === 0n ? t('mint.free') : `${formatEther(payValue)} ETH`}</b>
           <span>{t('mint.gas')}</span>
           <b>
             {fee != null ? t('mint.about', { v: Number(formatEther(fee)).toPrecision(2) }) : '—'}
@@ -252,7 +300,7 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
             {t('mint.same', { chain: LABEL[chainId] ?? '' })}{' '}
             {same.slice(0, 5).map((i) => (
               <span key={i.toString()}>
-                <Link href={`/${chainId}/${i}`}>#{i.toString()}</Link>{' '}
+                <Link href={workPath(chainId, i, ver)}>#{i.toString()}</Link>{' '}
               </span>
             ))}
             {same.length > 5 && `+${same.length - 5}`}
@@ -260,7 +308,7 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
         )}
         {isConnected ? (
           <button onClick={mint} disabled={!ready}>
-            {status.kind === 'busy' ? t('mint.busy') : t('mint.button', { chain: LABEL[chainId] ?? '' })}
+            {status.kind === 'busy' ? t('mint.busy') : t(asStamp ? 'mint.stampButton' : 'mint.button', { chain: LABEL[chainId] ?? '' })}
           </button>
         ) : (
           <Wallet />
@@ -271,7 +319,7 @@ export function MintPanel({ grid, bg, onFit }: { grid: PixGrid; bg: string; onFi
             {status.id != null && (
               <>
                 {' '}
-                → <Link href={`/${chainId}/${status.id}`}>{t('mint.toWork')}</Link>
+                → <Link href={workPath(chainId, status.id, ver)}>{t('mint.toWork')}</Link>
               </>
             )}
           </p>

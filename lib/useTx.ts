@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
-import { PIXMINT_ABI, client } from './contract';
-import { pixChain } from './chains';
+import { abiOf, client } from './contract';
+import { deployment, type Ver } from './chains';
 
 /** チェーン切り替え → 送信 → 確定待ち をひとまとめに */
-export function useTx(chainId: number) {
+export function useTx(chainId: number, ver: Ver = 3) {
   const { chainId: walletChain } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -19,8 +19,8 @@ export function useTx(chainId: number) {
       if (walletChain !== chainId) await switchChainAsync({ chainId });
       const hash = await writeContractAsync({
         chainId,
-        address: pixChain(chainId)!.address,
-        abi: PIXMINT_ABI,
+        address: deployment(chainId, ver)!.address,
+        abi: abiOf(ver),
         functionName,
         args,
         value,

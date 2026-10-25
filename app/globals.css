@@ -453,3 +453,13 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
   .stamp-list .stamp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
   .stamp-list .stamp-btn { padding: 4px; }
 }
+
+/* v4: スタンプの印・使ったスタンプの一覧 */
+.stamp-badge { display: inline-block; margin-left: 10px; vertical-align: middle; font: 700 10px/1 var(--font-logo); letter-spacing: 0.1em; padding: 4px 7px; border: 1px solid var(--accent); color: var(--accent); }
+.stamps-used { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.stamp-used { display: flex; gap: 8px; align-items: center; text-decoration: none; color: inherit; padding: 6px; border: 1px solid var(--line-hi); }
+.stamp-used:hover { border-color: var(--accent); }
+.stamp-used img { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
+.stamp-used span { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
+.stamp-used b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stamp-toggle { gap: 8px; font-size: 13px; cursor: pointer; }

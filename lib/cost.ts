@@ -6,7 +6,7 @@
 //   テストネットのガス価格は本物の相場とかけ離れている（Sepolia は 0.00000002 gwei ほど）ので、比べるときは
 //   テストネットで見積もった gas 量 × 対応するメインネットの今のガス価格（Sepolia → Ethereum・Base Sepolia → Base）で出す
 import { useEffect, useState } from 'react';
-import { createPublicClient, http, parseAbi, type Chain, type PublicClient } from 'viem';
+import { createPublicClient, http, parseAbi, type Abi, type Chain, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
 import { PIX_CHAINS, rpcTransport } from './chains';
 import { PIXMINT_ABI, client } from './contract';
@@ -45,8 +45,12 @@ export interface ChainCost {
 
 type Hex = `0x${string}`;
 
-/** 全チェーンの mint コスト。args が変わったら 0.5 秒待ってから gas を見積もり直す */
-export function useMintCosts(args: readonly [Hex, string, number] | null, value: bigint, account?: Hex) {
+/** そのチェーンで送る mint の呼び出し（v3 / v4・スタンプとして出すか）。無ければ v3 の mint */
+export type MintCall = (chainId: number) => { address: Hex; abi: Abi; functionName: string; args: unknown[]; value: bigint } | undefined;
+
+/** 全チェーンの mint コスト。args が変わったら 0.5 秒待ってから gas を見積もり直す。
+ *  callKey: build が返す中身（スタンプ・版・手数料）が変わったら変える文字列 */
+export function useMintCosts(args: readonly [Hex, string, number] | null, value: bigint, account?: Hex, build?: MintCall, callKey = '') {
   const [gasPrice, setGasPrice] = useState<Record<number, bigint>>({});
   const [ownPrice, setOwnPrice] = useState<Record<number, bigint>>({});
   const [gas, setGas] = useState<Record<number, bigint>>({});
@@ -79,7 +83,7 @@ export function useMintCosts(args: readonly [Hex, string, number] | null, value:
     };
   }, []);
 
-  const key = args ? `${args[0]}|${args[1]}|${args[2]}|${value}|${account ?? ''}` : '';
+  const key = args ? `${args[0]}|${args[1]}|${args[2]}|${value}|${account ?? ''}|${callKey}` : '';
   useEffect(() => {
     setGas({});
     setL1({});
@@ -91,14 +95,8 @@ export function useMintCosts(args: readonly [Hex, string, number] | null, value:
       const txSize = 4 + 160 + pad((args[0].length - 2) / 2) + pad(new TextEncoder().encode(args[1]).length) + 100;
       for (const p of PIX_CHAINS) {
         const c = client(p.chain.id);
-        c.estimateContractGas({
-          address: p.address,
-          abi: PIXMINT_ABI,
-          functionName: 'mint',
-          args: [...args],
-          value,
-          account: account ?? '0x000000000000000000000000000000000000dEaD',
-        })
+        const call = build?.(p.chain.id) ?? { address: p.address, abi: PIXMINT_ABI, functionName: 'mint', args: [...args], value };
+        c.estimateContractGas({ ...call, account: account ?? '0x000000000000000000000000000000000000dEaD' })
           .then((g) => live && setGas((m) => ({ ...m, [p.chain.id]: g })))
           .catch(() => {});
         if (OP_CHAINS.includes(p.chain.id))
