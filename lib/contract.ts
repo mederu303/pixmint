@@ -38,6 +38,8 @@ export interface WorkView {
   mintedAt: number;
   price: bigint; // 0 = 出品していない
   svg: string;
+  /** 使っている色（チェーンのデータの並び。先頭が背景） */
+  palette: string[];
   /** v4: スタンプとして出した作品 */
   stamp?: boolean;
   /** v4: 公式スタンプ（mederu が出した） */
@@ -73,8 +75,15 @@ export async function readWork(chainId: number, id: bigint, ver: Ver = 3): Promi
     royaltyBps: w[4],
     price,
     svg: pxmToSvg(hexToBytes(data)),
+    palette: paletteOf(hexToBytes(data)),
     ...(ver === 4 ? { stamp: !!w[5], official: !!w[6], stamps: [...(stamps ?? [])] } : {}),
   };
+}
+
+/** PXM の色の一覧（#rrggbb） */
+function paletteOf(d: Uint8Array): string[] {
+  const hex = (v: number) => v.toString(16).padStart(2, '0');
+  return Array.from({ length: d[2] }, (_, i) => '#' + hex(d[3 + i * 3]) + hex(d[4 + i * 3]) + hex(d[5 + i * 3]));
 }
 
 export async function readTotal(chainId: number, ver: Ver = 3): Promise<bigint> {

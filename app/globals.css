@@ -464,3 +464,6 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .stamp-used b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stamp-toggle { gap: 8px; font-size: 13px; cursor: pointer; }
 .stamp-badge.small { font-size: 8px; padding: 2px 4px; margin-left: 6px; }
+.work-palette { display: flex; flex-wrap: wrap; gap: 4px; }
+.work-palette button { width: 18px; height: 18px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 2px; box-shadow: none; cursor: copy; }
+.work-palette button:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.6); }

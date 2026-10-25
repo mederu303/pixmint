@@ -155,6 +155,12 @@ export function WorkPage({ ver }: { ver: Ver }) {
           <b>{t('work.fullyOnchain')}</b>
         </div>
 
+        {/* 使っている色（チェーンのデータに入っている色そのまま。押すと色コードをコピー） */}
+        <div className="work-palette" aria-label={t('work.palette')}>
+          {w.palette.map((c) => (
+            <button key={c} style={{ background: c }} title={c} aria-label={c} onClick={() => navigator.clipboard?.writeText(c).catch(() => {})} />
+          ))}
+        </div>
         {w.stamp && <p className="note">{t('work.stampNote')}</p>}
         {!!w.stamps?.length && <StampsUsed chainId={chainId} ids={w.stamps} />}
 
