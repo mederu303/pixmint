@@ -129,3 +129,25 @@ export function pxmToSvg(d: Uint8Array): string {
   for (let c = 1; c < n; c++) if (paths[c]) s += `<path fill="#${col(c)}" d="${paths[c]}"/>`;
   return s + '</svg>';
 }
+
+/** PXM → マス目。色 0（背景）は null（透明）にする。スタンプを Pix で押すときに使う */
+export function pxmToGrid(d: Uint8Array): Grid {
+  const size = d[1];
+  const n = d[2];
+  const p0 = 3 + 3 * n;
+  const col = (i: number) => '#' + hex2(d[3 + i * 3]) + hex2(d[4 + i * 3]) + hex2(d[5 + i * 3]);
+  const g: Grid = Array.from({ length: size }, () => Array(size).fill(null));
+  let x = 0;
+  let y = 0;
+  for (let i = p0; i < d.length; i += 2) {
+    const len = d[i];
+    const idx = d[i + 1];
+    if (idx !== 0) for (let k = 0; k < len; k++) g[y][x + k] = col(idx);
+    x += len;
+    if (x === size) {
+      x = 0;
+      y++;
+    }
+  }
+  return g;
+}

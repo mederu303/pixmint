@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Wallet } from '../../components/Header';
 import { Name } from '../../components/Name';
-import { LABEL, PIX_CHAINS, pixChain } from '../../lib/chains';
-import { PIXMINT_ABI, client } from '../../lib/contract';
+import { LABEL, PIX_CHAINS, deployment, mintVer } from '../../lib/chains';
+import { abiOf, client } from '../../lib/contract';
 import { forgetName, isSafeDisplayName } from '../../lib/names';
 import { useTx } from '../../lib/useTx';
 import { useI18n } from '../../lib/i18n';
@@ -22,16 +22,18 @@ export default function Me() {
   const [current, setCurrent] = useState<Record<number, string>>({});
   const [name, setName] = useState('');
   const [refresh, setRefresh] = useState(0);
-  const tx = useTx(chainId);
+  // 表示名はコントラクトごとに保存される。新しい作品の trait（v4 の Stamp Artist など）に出るよう、ミントする版（v4 があれば v4）に書く
+  const tx = useTx(chainId, mintVer(chainId));
 
   useEffect(() => {
     if (!address) return;
     Promise.all(
       PIX_CHAINS.map(async (p) => {
         try {
+          const v = mintVer(p.chain.id);
           const n = (await client(p.chain.id).readContract({
-            address: p.address,
-            abi: PIXMINT_ABI,
+            address: deployment(p.chain.id, v)!.address,
+            abi: abiOf(v),
             functionName: 'displayName',
             args: [address],
           })) as string;
@@ -97,7 +99,7 @@ export default function Me() {
           </div>
         </div>
         <button
-          disabled={bad || tx.busy || !pixChain(chainId)}
+          disabled={bad || tx.busy || !deployment(chainId, mintVer(chainId))}
           onClick={async () => {
             if (await tx.send('setName', [name.trim()])) {
               forgetName(address);

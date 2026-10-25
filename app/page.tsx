@@ -5,7 +5,11 @@ import { STAMPS, flip as flipG, rotate as rotateG, scale as scaleG, stampGrid } 
 import { setSound, sfx, soundOn } from '../lib/sound';
 import { ImportDialog } from '../components/ImportDialog';
 import { fitGrid, loadImage, type LoadedImage } from '../lib/convert';
-import { MintPanel } from '../components/MintPanel';
+import { MintPanel, type UsedStamp } from '../components/MintPanel';
+import { LABEL, PIX4_CHAINS } from '../lib/chains';
+import { readStamps, short, type StampView } from '../lib/contract';
+import { HIDDEN_STAMPS } from '../lib/stampsHidden';
+import { pxmToGrid } from '../src/pxm';
 import { useI18n } from '../lib/i18n';
 import { isDark, ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
 
@@ -48,6 +52,26 @@ export default function Studio() {
   const [stampRot, setStampRot] = useState(0);
   const [stampFlip, setStampFlip] = useState(false);
   const [stampScale, setStampScale] = useState(1);
+  // みんなのスタンプ（v4 のチェーンから読む。新しい順）と、この絵で押したもの（mint のときに記録する）
+  const [community, setCommunity] = useState<(StampView & { grid: PixGrid })[]>([]);
+  const [usedStamps, setUsedStamps] = useState<UsedStamp[]>([]);
+  useEffect(() => {
+    let live = true;
+    for (const p of PIX4_CHAINS)
+      readStamps(p.chain.id)
+        .then((list) => {
+          if (!live) return;
+          const mine = list
+            .filter((x) => !HIDDEN_STAMPS.has(`${x.chainId}:${x.id}`))
+            .map((x) => ({ ...x, grid: pxmToGrid(Uint8Array.from((x.data.slice(2).match(/../g) ?? []).map((b) => parseInt(b, 16)))) }));
+          setCommunity((cs) => [...cs.filter((c) => c.chainId !== p.chain.id), ...mine].sort((a, b) => b.mintedAt - a.mintedAt));
+        })
+        .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  const stampKey = (x: StampView) => `c:${x.chainId}:${x.id}`;
   const [sound, setSoundState] = useState(true);
   const [shapeFill, setShapeFill] = useState(false); // 四角・楕円を塗りつぶすか
   useEffect(() => setSoundState(soundOn()), []);
@@ -66,6 +90,7 @@ export default function Studio() {
         if (s.bg) setBg(s.bg);
         if (s.color) setColor(s.color);
         if (s.palette && PALETTES[s.palette]) setPalette(s.palette);
+        if (Array.isArray(s.stamps)) setUsedStamps(s.stamps.map((x: { chainId: number; id: string; title: string }) => ({ ...x, id: BigInt(x.id) })));
       }
       // 自分で色を変えたパレットだけ戻す。色数が既定と違うもの（パレット自体が更新された）は既定を使う
       const p = JSON.parse(localStorage.getItem(PAL_KEY) ?? 'null');
@@ -81,11 +106,12 @@ export default function Studio() {
   useEffect(() => {
     if (!loaded.current) return;
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ grid, bg, color, palette }));
+      const stamps = usedStamps.map((x) => ({ ...x, id: x.id.toString() }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ grid, bg, color, palette, stamps }));
       const edited = Object.fromEntries(Object.entries(palettes).filter(([k, v]) => v.join() !== PALETTES[k]?.join()));
       localStorage.setItem(PAL_KEY, JSON.stringify(edited));
     } catch {}
-  }, [grid, bg, color, palette, palettes]);
+  }, [grid, bg, color, palette, palettes, usedStamps]);
   useEffect(() => setHexIn(color), [color]);
 
   /** 色を変える。パレットの枠を選んでいれば、その枠の色も一緒に変える */
@@ -138,6 +164,7 @@ export default function Studio() {
     history.current = [];
     future.current = [];
     setGrid(newGrid(size));
+    setUsedStamps([]);
   };
   // ODD の切り替えは絵を残す（1列・1行を足す／削る）。削る側に絵があるときだけ確認する
   const toggleOdd = () => {
@@ -153,6 +180,7 @@ export default function Studio() {
     setFloating(null);
     setSel(null);
     setGrid(newGrid(grid.length));
+    setUsedStamps([]); // 全部消したら、記録するスタンプも空に
   };
 
   // ── 選択・コピー＆ペースト ──
@@ -203,13 +231,15 @@ export default function Studio() {
   }, [tool]);
 
   // スタンプ（今の色・向き・大きさを反映）
+  // みんなのスタンプは元の色のまま押す（公式は一部が今の色になる）
+  const pickedCommunity = community.find((x) => stampKey(x) === stampId);
   const stampG = useMemo(() => {
     const def = STAMPS.find((x) => x.id === stampId) ?? STAMPS[0];
-    let g = stampGrid(def, color);
+    let g = pickedCommunity ? pickedCommunity.grid : stampGrid(def, color);
     for (let i = 0; i < stampRot; i++) g = rotateG(g);
     if (stampFlip) g = flipG(g);
     return scaleG(g, stampScale);
-  }, [stampId, stampRot, stampFlip, stampScale, color]);
+  }, [stampId, stampRot, stampFlip, stampScale, color, pickedCommunity]);
   // Ctrl を押しながら = 左右反転、Shift を押しながら = 2 倍（その 1 回だけ。ボタンの設定に重ねる）
   const stampFor = useCallback(
     (m: StampMods) => {
@@ -234,6 +264,9 @@ export default function Studio() {
       }
       return out;
     });
+    // みんなのスタンプを押したら、mint のときに記録する分に入れる
+    if (pickedCommunity && !usedStamps.some((x) => x.chainId === pickedCommunity.chainId && x.id === pickedCommunity.id))
+      setUsedStamps((us) => [...us, { chainId: pickedCommunity.chainId, id: pickedCommunity.id, title: pickedCommunity.title }]);
     // 続けて押すときは音を間引く（うるさくならないように）
     const now = performance.now();
     if (!continuing || now - lastStampSound.current > 120) {
@@ -506,6 +539,25 @@ export default function Studio() {
                   </button>
                 ))}
               </div>
+              {community.length > 0 && (
+                <>
+                  <span className="stamp-head">{t('stamp.community')}</span>
+                  <div className="stamp-grid">
+                    {community.map((x) => (
+                      <button
+                        key={stampKey(x)}
+                        className={`stamp-btn ${stampId === stampKey(x) ? 'on' : ''}`}
+                        onClick={() => setStampId(stampKey(x))}
+                        title={`${x.title} · ${x.official ? 'mederu' : short(x.creator)} · ${LABEL[x.chainId] ?? ''} #${x.id}`}
+                        aria-label={x.title}
+                        aria-pressed={stampId === stampKey(x)}
+                      >
+                        <StampThumb grid={x.grid} />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </>
         ) : (
@@ -617,6 +669,7 @@ export default function Studio() {
       )}
 
       <MintPanel
+        usedStamps={usedStamps}
         grid={shown}
         bg={bg}
         onFit={() => {

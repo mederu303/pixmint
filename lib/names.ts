@@ -7,8 +7,8 @@
 // 作品のチェーンを先に見て、無ければ他の設定済みチェーンも見る。
 import { createPublicClient, http, isAddressEqual, namehash, parseAbi, toCoinType, type PublicClient } from 'viem';
 import { base, mainnet } from 'viem/chains';
-import { PIX_CHAINS, pixChain, rpcTransport } from './chains';
-import { PIXMINT_ABI, client, short } from './contract';
+import { PIX4_CHAINS, PIX_CHAINS, rpcTransport } from './chains';
+import { abiOf, client, short } from './contract';
 
 /** kind: 'pix' = 作者が自分で付けた表示名（検証なし）/ 'ens' = .eth・Basename（逆引き＋正引きで照合済み） */
 export type ResolvedName = { name: string; kind: 'pix' | 'ens' };
@@ -47,12 +47,14 @@ async function basename(address: `0x${string}`): Promise<string | null> {
 const cache =new Map<string, Promise<ResolvedName | null>>();
 
 async function pixName(address: `0x${string}`, preferChainId?: number): Promise<string | null> {
-  const ids = PIX_CHAINS.map((p) => p.chain.id).sort((a, b) => (a === preferChainId ? -1 : b === preferChainId ? 1 : 0));
-  for (const id of ids) {
+  // v4 の表示名を先に（これから書くのは v4）、無ければ v3。好みのチェーンを先に見る
+  const ds = [...PIX4_CHAINS, ...PIX_CHAINS].sort((a, b) => (a.chain.id === preferChainId ? -1 : b.chain.id === preferChainId ? 1 : 0) || b.ver - a.ver);
+  for (const d of ds) {
+    const id = d.chain.id;
     try {
       const n = (await client(id).readContract({
-        address: pixChain(id)!.address,
-        abi: PIXMINT_ABI,
+        address: d.address,
+        abi: abiOf(d.ver),
         functionName: 'displayName',
         args: [address],
       })) as string;

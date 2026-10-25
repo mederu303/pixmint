@@ -2,13 +2,18 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { formatEther } from 'viem';
-import { LABEL, PIX_CHAINS } from '../../lib/chains';
+import { LABEL, PIX4_CHAINS, PIX_CHAINS, workPath, type PixChain } from '../../lib/chains';
 import { Name } from '../../components/Name';
 import { useI18n } from '../../lib/i18n';
 import { readNum, readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
 import { saveOrder } from '../../lib/order';
 
 const PAGE = 24;
+// v3 と v4（スタンプ入り）の両方を読んで、チェーンごとにまとめて新しい順に並べる。totals・works は "<chainId>:<ver>" ごと
+const DEPLOYS: PixChain[] = [...PIX_CHAINS, ...PIX4_CHAINS];
+const dk = (p: PixChain) => `${p.chain.id}:${p.ver}`;
+/** チップに出すチェーン（v3 か v4 のどちらかがあるチェーン） */
+const CHAIN_IDS = [...new Set(DEPLOYS.map((p) => p.chain.id))];
 /** mederu の SNS（バナー右上） */
 const SOCIAL = [
   {
@@ -44,8 +49,8 @@ const OFF_KEY = 'pixmint-gallery-off';
 export default function Gallery() {
   const { t } = useI18n();
   const [off, setOff] = useState<number[]>([]);
-  const [totals, setTotals] = useState<Record<number, bigint>>({});
-  const [works, setWorks] = useState<Record<number, WorkView[]>>({}); // チェーンごとに読んだ分（新しい順）
+  const [totals, setTotals] = useState<Record<string, bigint>>({});
+  const [works, setWorks] = useState<Record<string, WorkView[]>>({}); // チェーンごとに読んだ分（新しい順）
   const [pages, setPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [workError, setWorkError] = useState<string | null>(null); // 件数は読めたのに作品が読めなかったとき（こちらはいつも出す）
@@ -57,13 +62,13 @@ export default function Gallery() {
   useEffect(() => {
     try {
       const v = JSON.parse(localStorage.getItem(OFF_KEY) ?? '[]');
-      if (Array.isArray(v)) setOff(v.filter((id) => PIX_CHAINS.some((p) => p.chain.id === id)));
+      if (Array.isArray(v)) setOff(v.filter((id) => CHAIN_IDS.includes(id)));
     } catch {}
   }, []);
   const toggle = (id: number) => {
     // 全部オフにはしない（最後の1つは消せない）
     const next = off.includes(id) ? off.filter((x) => x !== id) : [...off, id];
-    if (next.length >= PIX_CHAINS.length) return;
+    if (next.length >= CHAIN_IDS.length) return;
     setOff(next);
     try {
       localStorage.setItem(OFF_KEY, JSON.stringify(next));
@@ -75,12 +80,12 @@ export default function Gallery() {
   const [down, setDown] = useState<number[]>([]);
   useEffect(() => {
     let live = true;
-    for (const p of PIX_CHAINS)
-      readTotal(p.chain.id)
-        .then((n) => live && setTotals((m) => ({ ...m, [p.chain.id]: n })))
+    for (const p of DEPLOYS)
+      readTotal(p.chain.id, p.ver)
+        .then((n) => live && setTotals((m) => ({ ...m, [dk(p)]: n })))
         .catch((e) => {
           if (!live) return;
-          setDown((d) => [...d, p.chain.id]);
+          setDown((d) => (d.includes(p.chain.id) ? d : [...d, p.chain.id]));
           setError((e as Error).message.split('\n')[0]);
         });
     return () => {
@@ -91,17 +96,18 @@ export default function Gallery() {
   // 各チェーン、まだ読んでいない分を新しい方から pages×PAGE 件まで読む
   useEffect(() => {
     let live = true;
-    for (const p of PIX_CHAINS) {
+    for (const p of DEPLOYS) {
       const id = p.chain.id;
-      const total = totals[id];
+      const key = dk(p);
+      const total = totals[key];
       if (total == null) continue;
-      const have = works[id]?.length ?? 0;
+      const have = works[key]?.length ?? 0;
       const want = Math.min(Number(total), pages * PAGE);
       if (have >= want) continue;
       const ids: bigint[] = [];
       for (let i = Number(total) - have; i > Number(total) - want; i--) ids.push(BigInt(i));
-      Promise.all(ids.map((n) => readWork(id, n)))
-        .then((ws) => live && setWorks((m) => ({ ...m, [id]: [...(m[id] ?? []), ...ws] })))
+      Promise.all(ids.map((n) => readWork(id, n, p.ver)))
+        .then((ws) => live && setWorks((m) => ({ ...m, [key]: [...(m[key] ?? []), ...ws] })))
         .catch((e) => live && setWorkError((e as Error).message.split('\n')[0]));
     }
     return () => {
@@ -110,18 +116,24 @@ export default function Gallery() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totals, pages]);
 
-  const on = PIX_CHAINS.map((p) => p.chain.id).filter((id) => !off.includes(id));
+  const on = CHAIN_IDS.filter((id) => !off.includes(id));
+  const onDeploys = DEPLOYS.filter((p) => on.includes(p.chain.id));
+  /** そのチェーンの作品数（v3 + v4。どちらかがまだ読めていなければ null） */
+  const chainTotal = (id: number) => {
+    const ds = DEPLOYS.filter((p) => p.chain.id === id);
+    return ds.every((p) => totals[dk(p)] != null) ? ds.reduce((s, p) => s + totals[dk(p)], 0n) : null;
+  };
   const list = useMemo(
     () =>
-      on
-        .flatMap((id) => works[id] ?? [])
+      onDeploys
+        .flatMap((p) => works[dk(p)] ?? [])
         .sort((a, b) => b.mintedAt - a.mintedAt || (a.chainId === b.chainId ? Number(b.id - a.id) : 0)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [works, off],
   );
-  const count = on.reduce((s, id) => s + Number(totals[id] ?? 0), 0);
-  const loaded = on.every((id) => totals[id] != null);
-  const more = on.some((id) => Number(totals[id] ?? 0) > (works[id]?.length ?? 0));
+  const count = onDeploys.reduce((s, p) => s + Number(totals[dk(p)] ?? 0), 0);
+  const loaded = onDeploys.every((p) => totals[dk(p)] != null || down.includes(p.chain.id));
+  const more = onDeploys.some((p) => Number(totals[dk(p)] ?? 0) > (works[dk(p)]?.length ?? 0));
 
   const collections = PIX_CHAINS.filter((p) => OPENSEA[p.chain.id]);
   // 見出しの数字（表示しているチェーンの、読んだ分から。まだ全部読んでいなければ「+」を付ける）
@@ -207,7 +219,8 @@ export default function Gallery() {
       </section>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="chips" role="group" aria-label={t('gallery.chains')}>
-          {PIX_CHAINS.map((p) => {
+          {CHAIN_IDS.map((id) => {
+            const p = { chain: { id } };
             const isOn = !off.includes(p.chain.id);
             return (
               <button
@@ -218,7 +231,7 @@ export default function Gallery() {
                 title={down.includes(p.chain.id) ? t('gallery.down') : t('gallery.toggle')}
               >
                 {LABEL[p.chain.id]}
-                {totals[p.chain.id] != null && <span className="dim"> {totals[p.chain.id].toString()}</span>}
+                {chainTotal(p.chain.id) != null && <span className="dim"> {chainTotal(p.chain.id)!.toString()}</span>}
                 {down.includes(p.chain.id) && <span className="bad"> ×</span>}
               </button>
             );
@@ -226,15 +239,18 @@ export default function Gallery() {
         </div>
         {loaded && <span className="note">{t('gallery.count', { n: count })}</span>}
       </div>
-      {error && down.length >= PIX_CHAINS.length && <p className="note bad">{error}</p>}
+      {error && down.length >= CHAIN_IDS.length && <p className="note bad">{error}</p>}
       {workError && <p className="note bad">{workError}</p>}
       {loaded && count === 0 && <p className="note">{t('gallery.empty')}</p>}
       <div className="grid">
         {list.map((w) => (
-          <Link key={`${w.chainId}-${w.id}`} href={`/${w.chainId}/${w.id}`} className="card" onClick={() => saveOrder(list)}>
+          <Link key={`${w.chainId}-${w.ver}-${w.id}`} href={workPath(w.chainId, w.id, w.ver)} className="card" onClick={() => saveOrder(list)}>
             <img src={svgUrl(w.svg)} alt={w.title} />
             <div className="t">
-              <span>{w.title}</span>
+              <span>
+                {w.title}
+                {w.stamp && <span className="stamp-badge small">{t('work.stampBadge')}</span>}
+              </span>
               {w.price > 0n && <span className="price">{formatEther(w.price)} ETH</span>}
             </div>
             <div className="t note" style={{ paddingTop: 0 }}>

@@ -463,3 +463,4 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .stamp-used span { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
 .stamp-used b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stamp-toggle { gap: 8px; font-size: 13px; cursor: pointer; }
+.stamp-badge.small { font-size: 8px; padding: 2px 4px; margin-left: 6px; }
