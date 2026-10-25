@@ -23,12 +23,26 @@ const toHex = (b: Uint8Array) => ('0x' + Array.from(b, (x) => x.toString(16).pad
 /** 使ったスタンプ（v4。チェーンごとの番号）。Pix がスタンプのボタンで押したものを集める */
 export type UsedStamp = { chainId: number; id: bigint; title: string };
 
-export function MintPanel({ grid, bg, onFit, usedStamps = [] }: { grid: PixGrid; bg: string; onFit?: () => void; usedStamps?: UsedStamp[] }) {
+/** chainId・onChain: ミントするチェーンは Pix（スタンプの一覧）と共有する。切り替えの確認は呼ぶ側（app/page.tsx） */
+export function MintPanel({
+  grid,
+  bg,
+  onFit,
+  usedStamps = [],
+  chainId,
+  onChain,
+}: {
+  grid: PixGrid;
+  bg: string;
+  onFit?: () => void;
+  usedStamps?: UsedStamp[];
+  chainId: number;
+  onChain: (id: number) => void;
+}) {
   const { t, lang } = useI18n();
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [royalty, setRoyalty] = useState(500);
-  const [chainId, setChainId] = useState<number>(PIX_CHAINS[0]?.chain.id ?? 0);
   const [mintPrice, setMintPrice] = useState<bigint>(0n);
   const [stampPrice, setStampPrice] = useState<bigint>(0n);
   const ver = mintVer(chainId);
@@ -242,7 +256,7 @@ export function MintPanel({ grid, bg, onFit, usedStamps = [] }: { grid: PixGrid;
                 <button
                   key={p.chain.id}
                   className={`tool ${chainId === p.chain.id ? 'on' : ''}`}
-                  onClick={() => setChainId(p.chain.id)}
+                  onClick={() => onChain(p.chain.id)}
                 >
                   {LABEL[p.chain.id]}
                 </button>
@@ -275,7 +289,7 @@ export function MintPanel({ grid, bg, onFit, usedStamps = [] }: { grid: PixGrid;
                 <button
                   key={p.chain.id}
                   className={`cmp ${chainId === p.chain.id ? 'on' : ''}`}
-                  onClick={() => setChainId(p.chain.id)}
+                  onClick={() => onChain(p.chain.id)}
                 >
                   <span>{LABEL[p.chain.id]}</span>
                   <b>{c?.total != null ? `${Number(formatEther(c.total)).toPrecision(2)} ETH` : '…'}</b>
