@@ -48,6 +48,7 @@ export default function Gallery() {
   const [works, setWorks] = useState<Record<number, WorkView[]>>({}); // チェーンごとに読んだ分（新しい順）
   const [pages, setPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [workError, setWorkError] = useState<string | null>(null); // 件数は読めたのに作品が読めなかったとき（こちらはいつも出す）
   const [feeBps, setFeeBps] = useState<bigint | null>(null);
   useEffect(() => {
     if (PIX_CHAINS[0]) readNum(PIX_CHAINS[0].chain.id, 'feeBps').then(setFeeBps).catch(() => {});
@@ -69,12 +70,19 @@ export default function Gallery() {
     } catch {}
   };
 
+  // 読めなかったチェーン（ローカルのノードを止めている・RPC が落ちているなど）。そのチェーンのチップに印を出すだけにし、
+  // ページ全体の赤いエラーは、全部のチェーンが読めないときだけ出す
+  const [down, setDown] = useState<number[]>([]);
   useEffect(() => {
     let live = true;
     for (const p of PIX_CHAINS)
       readTotal(p.chain.id)
         .then((n) => live && setTotals((m) => ({ ...m, [p.chain.id]: n })))
-        .catch((e) => live && setError((e as Error).message.split('\n')[0]));
+        .catch((e) => {
+          if (!live) return;
+          setDown((d) => [...d, p.chain.id]);
+          setError((e as Error).message.split('\n')[0]);
+        });
     return () => {
       live = false;
     };
@@ -94,7 +102,7 @@ export default function Gallery() {
       for (let i = Number(total) - have; i > Number(total) - want; i--) ids.push(BigInt(i));
       Promise.all(ids.map((n) => readWork(id, n)))
         .then((ws) => live && setWorks((m) => ({ ...m, [id]: [...(m[id] ?? []), ...ws] })))
-        .catch((e) => live && setError((e as Error).message.split('\n')[0]));
+        .catch((e) => live && setWorkError((e as Error).message.split('\n')[0]));
     }
     return () => {
       live = false;
@@ -207,17 +215,19 @@ export default function Gallery() {
                 className={`tool ${isOn ? 'on' : ''}`}
                 onClick={() => toggle(p.chain.id)}
                 aria-pressed={isOn}
-                title={t('gallery.toggle')}
+                title={down.includes(p.chain.id) ? t('gallery.down') : t('gallery.toggle')}
               >
                 {LABEL[p.chain.id]}
                 {totals[p.chain.id] != null && <span className="dim"> {totals[p.chain.id].toString()}</span>}
+                {down.includes(p.chain.id) && <span className="bad"> ×</span>}
               </button>
             );
           })}
         </div>
         {loaded && <span className="note">{t('gallery.count', { n: count })}</span>}
       </div>
-      {error && <p className="note bad">{error}</p>}
+      {error && down.length >= PIX_CHAINS.length && <p className="note bad">{error}</p>}
+      {workError && <p className="note bad">{workError}</p>}
       {loaded && count === 0 && <p className="note">{t('gallery.empty')}</p>}
       <div className="grid">
         {list.map((w) => (

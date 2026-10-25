@@ -134,6 +134,7 @@ const en = {
   'gallery.statListed': 'Listed',
   'gallery.statFloor': 'Floor',
   'gallery.toggle': 'Show / hide works on this chain',
+  'gallery.down': "Couldn't reach this chain right now",
 
   'work.by': 'by',
   'work.loading': 'Loading…',
@@ -310,6 +311,7 @@ const ja: Record<Key, string> = {
   'gallery.statListed': '出品中',
   'gallery.statFloor': '最安値',
   'gallery.toggle': 'このチェーンの作品を表示する／隠す',
+  'gallery.down': 'いまこのチェーンに接続できません',
 
   'work.by': 'by',
   'work.loading': '読み込み中…',
