@@ -440,3 +440,15 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .embed-bar b { overflow: hidden; text-overflow: ellipsis; }
 .embed-chain { margin-left: auto; color: var(--accent); font-size: 10px; letter-spacing: 0.1em; }
 .embed-bar a { color: #eee; text-decoration: none; padding: 0 4px; }
+
+/* スタンプ中: パレットは 1 行（横にスクロール）、その下は大きめのスタンプ一覧 */
+.pal-mini .swatches { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; padding: 3px 2px 5px; }
+.pal-mini .swatches button { flex: none; width: 22px; height: 22px; aspect-ratio: auto; }
+.pal-mini .swatches button.on { outline-offset: 1px; }
+.stamp-list .stamp-head { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.stamp-list .stamp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.stamp-list .stamp-btn { padding: 8px; }
+@media (max-width: 640px) {
+  .stamp-list .stamp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .stamp-list .stamp-btn { padding: 4px; }
+}

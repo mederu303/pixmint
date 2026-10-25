@@ -419,21 +419,6 @@ export default function Studio() {
         )}
         {tool === 'stamp' && (
           <div className="sect stamps">
-            {/* 今の色が暗いと、染まった部分と輪郭が暗い枠に溶けるので、見本だけ明るい下地にする */}
-            <div className={`stamp-grid ${isDark(color) ? 'light' : ''}`}>
-              {STAMPS.map((x) => (
-                <button
-                  key={x.id}
-                  className={`stamp-btn ${stampId === x.id ? 'on' : ''}`}
-                  onClick={() => setStampId(x.id)}
-                  title={x.id}
-                  aria-label={x.id}
-                  aria-pressed={stampId === x.id}
-                >
-                  <StampThumb grid={stampGrid(x, color)} />
-                </button>
-              ))}
-            </div>
             <div className="stamp-opts">
               <button className="tool" onClick={() => setStampRot((n) => (n + 1) % 4)} title={`${t('stamp.rotate')} (R)`}>
                 ⟳
@@ -469,6 +454,7 @@ export default function Studio() {
               aria-label={t('editor.color')}
             />
           </div>
+          {tool !== 'stamp' && (
           <div className="colorrow">
             <label className="colorrow note" style={{ flex: 1, minWidth: 0 }} title={t('editor.bg')}>
               <span className={`chip ${isDark(bg) ? 'dark' : ''}`}>
@@ -494,8 +480,37 @@ export default function Studio() {
               ODD
             </button>
           </div>
+          )}
         </div>
 
+        {tool === 'stamp' ? (
+          <>
+            {/* スタンプ中: パレットは 1 行に縮めて、下を全部スタンプの一覧にする */}
+            <div className="sect" title={t('editor.editHint')}>
+              <div className="pal-mini">
+                <Swatches colors={palettes[palette]} selected={swatch} onPick={pickSwatch} />
+              </div>
+            </div>
+            <div className="sect stamps stamp-list">
+              <span className="stamp-head">{t('stamp.official')}</span>
+              {/* 今の色が暗いと、染まった部分と輪郭が暗い枠に溶けるので、見本だけ明るい下地にする */}
+              <div className={`stamp-grid ${isDark(color) ? 'light' : ''}`}>
+                {STAMPS.map((x) => (
+                  <button
+                    key={x.id}
+                    className={`stamp-btn ${stampId === x.id ? 'on' : ''}`}
+                    onClick={() => setStampId(x.id)}
+                    title={x.id}
+                    aria-label={x.id}
+                    aria-pressed={stampId === x.id}
+                  >
+                    <StampThumb grid={stampGrid(x, color)} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
         <div className="sect">
           <div className="colorrow">
             <select
@@ -526,6 +541,7 @@ export default function Studio() {
             <Swatches colors={palettes[palette]} selected={swatch} onPick={pickSwatch} />
           </div>
         </div>
+        )}
 
         <div className="sect dl">
           <button
