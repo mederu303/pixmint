@@ -2,6 +2,7 @@
 //
 //   npm run deploy -- sepolia            # Sepolia
 //   npm run deploy -- base-sepolia       # Base Sepolia
+//   npm run deploy -- sepolia v4         # v4（スタンプ入り。lib/PixMint4.json = npm run test:v4 で作る）
 //
 // 秘密鍵と owner は .env.deploy に書く（git には入らない。画面にも出さない）:
 //   PRIVATE_KEY=0x...
@@ -31,6 +32,7 @@ const envFile = new URL('../.env.deploy', import.meta.url);
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 
 const name = process.argv[2];
+const v4 = process.argv[3] === 'v4';
 const net = name ? NETWORKS[name] : undefined;
 if (name && !net) {
   console.error(`知らないネットワーク: ${name}（${Object.keys(NETWORKS).join(' / ')}）`);
@@ -47,7 +49,7 @@ if (OWNER && !isAddress(OWNER)) {
   process.exit(1);
 }
 
-const art = JSON.parse(fs.readFileSync(new URL('../lib/PixMint.json', import.meta.url)));
+const art = JSON.parse(fs.readFileSync(new URL(v4 ? '../lib/PixMint4.json' : '../lib/PixMint.json', import.meta.url)));
 // MetaMask が書き出す鍵は 0x なし
 const account = privateKeyToAccount(PRIVATE_KEY.startsWith('0x') ? PRIVATE_KEY : `0x${PRIVATE_KEY}`);
 const transport = http(RPC_URL);
@@ -76,5 +78,5 @@ if (r.status !== 'success') {
 // Base などの OP 系は L1 データ費が別にかかる（viem の既定の整形では落ちるので生の receipt から読む）
 const raw = await pub.request({ method: 'eth_getTransactionReceipt', params: [hash] });
 const fee = r.gasUsed * r.effectiveGasPrice + BigInt(raw.l1Fee ?? 0);
-console.log(`PixMint: ${r.contractAddress}  (gas ${r.gasUsed}, fee ${formatEther(fee)} ETH, block ${r.blockNumber})`);
+console.log(`${v4 ? 'PixMint4' : 'PixMint'}: ${r.contractAddress}  (gas ${r.gasUsed}, fee ${formatEther(fee)} ETH, block ${r.blockNumber})`);
 console.log(`\n.env.local に:\nNEXT_PUBLIC_PIXMINT_${chainId}=${r.contractAddress}`);
