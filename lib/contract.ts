@@ -243,3 +243,27 @@ export async function findOriginal(w: WorkView): Promise<{ chainId: number; ver:
     .sort((a, b) => a.mintedAt - b.mintedAt);
   return earlier[0] ?? null;
 }
+
+/** 同じ絵（1 バイトも違わないデータ）の作品を、このサイトの全チェーン・全版から探す。作者も付ける */
+export async function findSameArtEverywhere(
+  pxmHex: string,
+  size: number,
+  colors: number,
+): Promise<{ chainId: number; ver: Ver; id: bigint; creator: `0x${string}` }[]> {
+  const found = await Promise.all(
+    [...PIX_CHAINS, ...PIX4_CHAINS].map(async (p) => {
+      try {
+        const ids = await findSameArt(p.chain.id, pxmHex, size, colors, p.ver);
+        return Promise.all(
+          ids.map(async (id) => {
+            const x = (await client(p.chain.id).readContract({ address: addr(p.chain.id, p.ver), abi: abiOf(p.ver), functionName: 'works', args: [id] })) as [`0x${string}`];
+            return { chainId: p.chain.id, ver: p.ver, id, creator: x[0] };
+          }),
+        );
+      } catch {
+        return [];
+      }
+    }),
+  );
+  return found.flat();
+}

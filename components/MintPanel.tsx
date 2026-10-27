@@ -7,7 +7,7 @@ import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
 import { Wallet } from './Header';
 import { encodePxm, pxmToSvg, validatePxm, PXM_MAX_RUNS } from '../src/pxm';
 import { LABEL, PIX_CHAINS, deployment, mintVer, workPath } from '../lib/chains';
-import { abiOf, client, estimateMintGas, findSameArt, readNum, svgUrl } from '../lib/contract';
+import { abiOf, client, estimateMintGas, findSameArtEverywhere, readNum, svgUrl } from '../lib/contract';
 import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cost';
 import { flatten, type PixGrid } from '../lib/pix';
 import { countRuns } from '../lib/convert';
@@ -122,25 +122,31 @@ export function MintPanel({
   // ここは実際にウォレットで払う額（テストネットならテストネットのガス価格）。下の比べる欄はメインネット換算
   const gasPrice = cur?.ownGasPrice ?? null;
   const fee = cur?.ownTotal != null ? cur.ownTotal - payValue : gasPrice != null ? gas * gasPrice : null;
-  // 同じ絵がこのチェーンでもう mint されていないか（絵・チェーンが変わったら 0.8 秒待って調べる。mint の直後にも調べ直す）
-  const [same, setSame] = useState<bigint[]>([]);
+  // 同じ絵がもう mint されていないか（全チェーン・全版。絵が変わったら 0.8 秒待って調べる。mint の直後にも調べ直す）
+  //   ほかの人の作品と同じ絵 → ミントできない（コピー対策。2026-10-27）。自分の作品と同じ絵 → 注意だけ（別のチェーンにも出すのはふつう）
+  const [sameAll, setSameAll] = useState<Awaited<ReturnType<typeof findSameArtEverywhere>>>([]);
   const [sameTick, setSameTick] = useState(0);
   useEffect(() => {
-    setSame([]);
-    if (!encoded.bytes || !encoded.info || !deployment(chainId, mintVer(chainId))) return;
+    setSameAll([]);
+    if (!encoded.bytes || !encoded.info) return;
     let live = true;
     const { size, colors } = encoded.info;
     const hex = toHex(encoded.bytes);
     const timer = setTimeout(() => {
-      findSameArt(chainId, hex, size, colors, mintVer(chainId))
-        .then((ids) => live && setSame(ids))
+      findSameArtEverywhere(hex, size, colors)
+        .then((xs) => live && setSameAll(xs))
         .catch(() => {});
     }, 800);
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [chainId, encoded.bytes, encoded.info, sameTick]);
+  }, [encoded.bytes, encoded.info, sameTick]);
+  const me = address?.toLowerCase();
+  const others = sameAll.filter((x) => x.creator.toLowerCase() !== me);
+  const copyBlocked = others.length > 0;
+  // 自分の作品で、このチェーン・この版に同じ絵があるもの（mint の前に確認する）
+  const same = sameAll.filter((x) => x.chainId === chainId && x.ver === ver && x.creator.toLowerCase() === me).map((x) => x.id);
   const hint = useMemo(() => colorHint(grid, bg, encoded.bytes?.length ?? 0), [grid, bg, encoded.bytes]);
 
   async function mint() {
@@ -175,7 +181,7 @@ export function MintPanel({
   }
 
   const blocked = isBlocked(address);
-  const ready = !!encoded.bytes && !titleBad && !tooManyStamps && !blocked && !!chainId && status.kind !== 'busy';
+  const ready = !!encoded.bytes && !titleBad && !tooManyStamps && !blocked && !copyBlocked && !!chainId && status.kind !== 'busy';
 
   return (
     <div className="mintcol">
@@ -313,6 +319,18 @@ export function MintPanel({
         </p>
         {OP_CHAINS.includes(chainId) ? <p className="note">{t('mint.baseNote')}</p> : null}
 
+        {copyBlocked && (
+          <p className="note bad">
+            {t('mint.copyBlocked')}{' '}
+            {others.slice(0, 3).map((x) => (
+              <span key={`${x.chainId}-${x.ver}-${x.id}`}>
+                <Link href={workPath(x.chainId, x.id, x.ver)}>
+                  {LABEL[x.chainId]} {x.ver === 4 ? '' : 'Genesis '}#{x.id.toString()}
+                </Link>{' '}
+              </span>
+            ))}
+          </p>
+        )}
         {same.length > 0 && (
           <p className="note warn">
             {t('mint.same', { chain: LABEL[chainId] ?? '' })}{' '}
