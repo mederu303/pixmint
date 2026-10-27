@@ -10,6 +10,7 @@ import { LABEL, PIX4_CHAINS } from '../lib/chains';
 import { requestMintChain, setMintChainGuard, useMintChain } from '../lib/mintChain';
 import { readStamps, short, type StampView } from '../lib/contract';
 import { HIDDEN_STAMPS } from '../lib/stampsHidden';
+import { isHidden } from '../lib/moderation';
 import { pxmToGrid } from '../src/pxm';
 import { useI18n } from '../lib/i18n';
 import { isDark, ALL_SIZES, DEFAULT_BG, DEFAULT_COLOR, GRID_SIZES, PALETTES, baseSize, isOdd, regrid, wouldCrop, exportPng, exportScale, newGrid, clearRect, cutOut, stamp, type PixFloat, type PixGrid, type PixRect, type PixTool } from '../lib/pix';
@@ -63,7 +64,8 @@ export default function Studio() {
         .then((list) => {
           if (!live) return;
           const mine = list
-            .filter((x) => !HIDDEN_STAMPS.has(`${x.chainId}:${x.id}`))
+            // 隠したスタンプ・隠した作品・止めたウォレットのスタンプは出さない（lib/stampsHidden.ts・lib/moderation.ts）
+            .filter((x) => !HIDDEN_STAMPS.has(`${x.chainId}:${x.id}`) && !isHidden({ chainId: x.chainId, ver: 4, id: x.id, creator: x.creator }))
             .map((x) => ({ ...x, grid: pxmToGrid(Uint8Array.from((x.data.slice(2).match(/../g) ?? []).map((b) => parseInt(b, 16)))) }));
           setCommunity((cs) => [...cs.filter((c) => c.chainId !== p.chain.id), ...mine].sort((a, b) => b.mintedAt - a.mintedAt));
         })

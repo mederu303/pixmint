@@ -2,7 +2,7 @@
 import { createPublicClient, type Abi, type PublicClient } from 'viem';
 import art from './PixMint.json';
 import art4 from './PixMint4.json';
-import { readChain, rpcTransport, type Ver } from './chains';
+import { PIX4_CHAINS, PIX_CHAINS, readChain, rpcTransport, type Ver } from './chains';
 import { pxmToSvg } from '../src/pxm';
 
 export const PIXMINT_ABI = art.abi as Abi;
@@ -38,6 +38,8 @@ export interface WorkView {
   mintedAt: number;
   price: bigint; // 0 = 出品していない
   svg: string;
+  /** チェーンにあるピクセルデータ（PXM の 16 進）。完全なコピーを見つけるのに使う */
+  data: `0x${string}`;
   /** 使っている色（チェーンのデータの並び。先頭が背景） */
   palette: string[];
   /** v4: スタンプとして出した作品 */
@@ -75,6 +77,7 @@ export async function readWork(chainId: number, id: bigint, ver: Ver = 3): Promi
     royaltyBps: w[4],
     price,
     svg: pxmToSvg(hexToBytes(data)),
+    data,
     palette: paletteOf(hexToBytes(data)),
     ...(ver === 4 ? { stamp: !!w[5], official: !!w[6], stamps: [...(stamps ?? [])] } : {}),
   };
@@ -213,3 +216,30 @@ export async function readStampArtists(chainId: number, id: bigint): Promise<`0x
 }
 /** スタンプの作者たちの取り分（コントラクトの STAMP_BPS と同じ 8%） */
 export const STAMP_BPS = 800n;
+
+/** 完全なコピーの元: この作品と 1 バイトも違わないデータで、先にミントされた作品（チェーン・版をまたいで探す）。
+ *  無ければ null。同じ時刻なら同じコントラクトの小さい番号を元とみなす */
+export async function findOriginal(w: WorkView): Promise<{ chainId: number; ver: Ver; id: bigint; creator: `0x${string}`; mintedAt: number } | null> {
+  const found = await Promise.all(
+    [...PIX_CHAINS, ...PIX4_CHAINS].map(async (p) => {
+      try {
+        const ids = await findSameArt(p.chain.id, w.data, w.size, w.colors, p.ver);
+        return Promise.all(
+          ids
+            .filter((id) => !(p.chain.id === w.chainId && p.ver === w.ver && id === w.id))
+            .map(async (id) => {
+              const x = (await client(p.chain.id).readContract({ address: addr(p.chain.id, p.ver), abi: abiOf(p.ver), functionName: 'works', args: [id] })) as [`0x${string}`, number];
+              return { chainId: p.chain.id, ver: p.ver, id, creator: x[0], mintedAt: Number(x[1]) };
+            }),
+        );
+      } catch {
+        return [];
+      }
+    }),
+  );
+  const earlier = found
+    .flat()
+    .filter((o) => o.mintedAt < w.mintedAt || (o.mintedAt === w.mintedAt && o.chainId === w.chainId && o.ver === w.ver && o.id < w.id))
+    .sort((a, b) => a.mintedAt - b.mintedAt);
+  return earlier[0] ?? null;
+}

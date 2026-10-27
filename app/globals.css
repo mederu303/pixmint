@@ -473,3 +473,5 @@ button.credits-logo { background: none; border: 0; padding: 0; cursor: pointer; 
 .menu-chains button { flex: 1; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
 .menu-chains button.on { color: var(--accent); border-color: var(--accent); }
 .wallet-chain { margin-left: 8px; font-size: 10px; letter-spacing: 0.06em; color: var(--dim); }
+.mod-note { padding: 8px 10px; border: 1px solid currentColor; line-height: 1.6; }
+.copy-badge { display: inline-block; margin-right: 6px; font: 700 8px/1 var(--font-logo); padding: 2px 4px; border: 1px solid #ff3c5a; color: #ff3c5a; vertical-align: middle; }

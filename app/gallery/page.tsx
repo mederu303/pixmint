@@ -7,6 +7,7 @@ import { Name } from '../../components/Name';
 import { useI18n } from '../../lib/i18n';
 import { readNum, readTotal, readWork, svgUrl, type WorkView } from '../../lib/contract';
 import { saveOrder } from '../../lib/order';
+import { isHidden } from '../../lib/moderation';
 
 const PAGE = 24;
 // v3 と v4（スタンプ入り）の両方を読んで、チェーンごとにまとめて新しい順に並べる。totals・works は "<chainId>:<ver>" ごと
@@ -123,14 +124,25 @@ export default function Gallery() {
     const ds = DEPLOYS.filter((p) => p.chain.id === id);
     return ds.every((p) => totals[dk(p)] != null) ? ds.reduce((s, p) => s + totals[dk(p)], 0n) : null;
   };
-  const list = useMemo(
-    () =>
-      onDeploys
-        .flatMap((p) => works[dk(p)] ?? [])
-        .sort((a, b) => b.mintedAt - a.mintedAt || (a.chainId === b.chainId ? Number(b.id - a.id) : 0)),
+  // 隠す作品（lib/moderation.ts）は出さない。完全なコピー（先に同じデータの作品がある）は「コピーも表示」まで隠す
+  const [showCopies, setShowCopies] = useState(false);
+  const { list, copies } = useMemo(() => {
+    const all = onDeploys
+      .flatMap((p) => works[dk(p)] ?? [])
+      .filter((w) => !isHidden(w))
+      .sort((a, b) => b.mintedAt - a.mintedAt || (a.chainId === b.chainId ? Number(b.id - a.id) : 0));
+    // 読んだ中で、同じデータのいちばん古いものを元とする（古い順に見て、2 つ目からがコピー）
+    const seen = new Set<string>();
+    const copyKeys = new Set<string>();
+    for (const w of [...all].reverse()) {
+      const k = w.data.toLowerCase();
+      if (seen.has(k)) copyKeys.add(`${w.chainId}:${w.ver}:${w.id}`);
+      seen.add(k);
+    }
+    const isCopy = (w: WorkView) => copyKeys.has(`${w.chainId}:${w.ver}:${w.id}`);
+    return { list: showCopies ? all : all.filter((w) => !isCopy(w)), copies: copyKeys };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [works, off],
-  );
+  }, [works, off, showCopies]);
   const count = onDeploys.reduce((s, p) => s + Number(totals[dk(p)] ?? 0), 0);
   const loaded = onDeploys.every((p) => totals[dk(p)] != null || down.includes(p.chain.id));
   const more = onDeploys.some((p) => Number(totals[dk(p)] ?? 0) > (works[dk(p)]?.length ?? 0));
@@ -237,7 +249,14 @@ export default function Gallery() {
             );
           })}
         </div>
-        {loaded && <span className="note">{t('gallery.count', { n: count })}</span>}
+        <span className="row" style={{ gap: 10 }}>
+          {copies.size > 0 && (
+            <button className={`tool ${showCopies ? 'on' : ''}`} onClick={() => setShowCopies((v) => !v)} title={t('gallery.copiesHint')}>
+              {t('gallery.copies', { n: copies.size })}
+            </button>
+          )}
+          {loaded && <span className="note">{t('gallery.count', { n: count })}</span>}
+        </span>
       </div>
       {error && down.length >= CHAIN_IDS.length && <p className="note bad">{error}</p>}
       {workError && <p className="note bad">{workError}</p>}
@@ -248,6 +267,7 @@ export default function Gallery() {
             <img src={svgUrl(w.svg)} alt={w.title} />
             <div className="t">
               <span>
+                {copies.has(`${w.chainId}:${w.ver}:${w.id}`) && <span className="copy-badge">{t('gallery.copyBadge')}</span>}
                 {w.title}
                 {w.stamp && <span className="stamp-badge small">{t('work.stampBadge')}</span>}
               </span>

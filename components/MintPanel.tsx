@@ -12,6 +12,7 @@ import { OP_CHAINS, TESTNETS, fiat, useEthPrice, useMintCosts } from '../lib/cos
 import { flatten, type PixGrid } from '../lib/pix';
 import { countRuns } from '../lib/convert';
 import { useI18n } from '../lib/i18n';
+import { isBlocked } from '../lib/moderation';
 
 const ROYALTIES = [0, 250, 500, 750, 1000];
 const TITLE_MAX = 96;
@@ -173,7 +174,8 @@ export function MintPanel({
     }
   }
 
-  const ready = !!encoded.bytes && !titleBad && !tooManyStamps && !!chainId && status.kind !== 'busy';
+  const blocked = isBlocked(address);
+  const ready = !!encoded.bytes && !titleBad && !tooManyStamps && !blocked && !!chainId && status.kind !== 'busy';
 
   return (
     <div className="mintcol">
@@ -322,6 +324,7 @@ export function MintPanel({
             {same.length > 5 && `+${same.length - 5}`}
           </p>
         )}
+        {blocked && <p className="note bad">{t('mint.blocked')}</p>}
         {isConnected ? (
           <button onClick={mint} disabled={!ready}>
             {status.kind === 'busy' ? t('mint.busy') : t(asStamp ? 'mint.stampButton' : 'mint.button', { chain: LABEL[chainId] ?? '' })}

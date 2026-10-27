@@ -7,7 +7,8 @@ import { useAccount } from 'wagmi';
 import { Wallet } from './Header';
 import { Name } from './Name';
 import { LABEL, deployment, workPath, type Ver } from '../lib/chains';
-import { STAMP_BPS, readNum, readStampArtists, readWork, svgUrl, type WorkView } from '../lib/contract';
+import { STAMP_BPS, findOriginal, readNum, readStampArtists, readWork, svgUrl, type WorkView } from '../lib/contract';
+import { HIDDEN_WORKS, isBlocked, isHidden, workKey } from '../lib/moderation';
 import { useTx } from '../lib/useTx';
 import { neighbors } from '../lib/order';
 import { useI18n } from '../lib/i18n';
@@ -81,6 +82,12 @@ export function WorkPage({ ver }: { ver: Ver }) {
     attempt();
     readNum(chainId, 'feeBps', ver).then(setFeeBps).catch(() => {});
   }, [chainId, id, ver]);
+  // 完全なコピーなら、元の作品（先に同じデータでミントされたもの）
+  const [original, setOriginal] = useState<Awaited<ReturnType<typeof findOriginal>>>(null);
+  useEffect(() => {
+    setOriginal(null);
+    if (w) findOriginal(w).then(setOriginal).catch(() => {});
+  }, [w?.chainId, w?.ver, w?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // v4: 売れたときにスタンプの分を受け取る作者
   const [stampArtists, setStampArtists] = useState<string[]>([]);
   useEffect(() => {
@@ -92,6 +99,9 @@ export function WorkPage({ ver }: { ver: Ver }) {
   if (!w) return <p className="note">{t('work.loading')}</p>;
 
   const mine = !!address && address.toLowerCase() === w.owner.toLowerCase();
+  // サイトで隠した作品・止めたウォレットは、ここからの売買を出さない（lib/moderation.ts）
+  const hidden = isHidden(w);
+  const tradeOff = hidden || isBlocked(address);
   const isSecondary = w.owner.toLowerCase() !== w.creator.toLowerCase();
   const fee = (w.price * feeBps) / 10_000n;
   const royalty = isSecondary ? (w.price * BigInt(w.royaltyBps)) / 10_000n : 0n;
@@ -161,11 +171,24 @@ export function WorkPage({ ver }: { ver: Ver }) {
             <button key={c} style={{ background: c }} title={c} aria-label={c} onClick={() => navigator.clipboard?.writeText(c).catch(() => {})} />
           ))}
         </div>
+        {hidden && <p className="note bad mod-note">{t('work.hidden', { why: HIDDEN_WORKS.get(workKey(w)) ?? t('work.hiddenBlocked') })}</p>}
+        {original && (
+          <p className="note warn mod-note">
+            {t('work.copyOf')}{' '}
+            <Link href={workPath(original.chainId, original.id, original.ver)}>
+              {LABEL[original.chainId]} {original.ver === 4 ? '' : 'Genesis '}#{original.id.toString()}
+            </Link>{' '}
+            · <Name address={original.creator} chainId={original.chainId} /> ·{' '}
+            {new Date(original.mintedAt * 1000).toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-US')}
+          </p>
+        )}
         {w.stamp && <p className="note">{t('work.stampNote')}</p>}
         {!!w.stamps?.length && <StampsUsed chainId={chainId} ids={w.stamps} />}
 
         <div className="panel stack">
-          {w.price > 0n ? (
+          {tradeOff ? (
+            <span className="note">{t('work.tradeOff')}</span>
+          ) : w.price > 0n ? (
             <>
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <span className="note">{t('work.forSale')}</span>
@@ -196,7 +219,14 @@ export function WorkPage({ ver }: { ver: Ver }) {
                   {t('work.unlist')}
                 </button>
               ) : isConnected ? (
-                <button disabled={tx.busy} onClick={async () => (await tx.send('buy', [w.id], w.price)) && load()}>
+                <button
+                  disabled={tx.busy}
+                  onClick={async () => {
+                    // 完全なコピーは、買う前にもう一度知らせる
+                    if (original && !window.confirm(t('work.copyConfirm'))) return;
+                    if (await tx.send('buy', [w.id], w.price)) load();
+                  }}
+                >
                   {tx.busy ? t('mint.busy') : t('work.buy')}
                 </button>
               ) : (
